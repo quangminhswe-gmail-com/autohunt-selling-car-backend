@@ -42,12 +42,10 @@ jobs:
           tags: autohunt-selling-car-backend:${{ github.sha }}
 
       - name: Vulnerability Scan
-        uses: lazy-actions/gitrivy@v3
+        uses: aquasecurity/trivy-action@master
         with:
           images: autohunt-selling-car-backend:${{ github.sha }}
           format: table
-        env:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push to Dockerhub
         uses: docker/build-push-action@v4
