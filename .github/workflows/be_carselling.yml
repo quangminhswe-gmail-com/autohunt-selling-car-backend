@@ -44,7 +44,7 @@ jobs:
       - name: Vulnerability Scan
         uses: aquasecurity/trivy-action@master
         with:
-          images-ref: "autohunt-selling-car-backend:${{ github.sha }}"
+          image-ref: "autohunt-selling-car-backend:${{ github.sha }}"
           format: table
 
       - name: Push to Dockerhub
