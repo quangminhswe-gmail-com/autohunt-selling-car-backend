@@ -1,0 +1,33 @@
+services:
+  mongodb:
+    image: 'mongo'
+    container_name: container_mongo
+    restart: "always"
+    ports: 
+    - "27017:27017"
+    env_file:
+      - ./env/env_mongo.env
+    volumes:
+      - mongo_data:/data/db
+  backend:
+    container_name: container_fronend
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./env/development.env
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - backend_logs:/app/logs
+    command: npm run start:dev
+    networks:
+      - network_connect
+    depends_on:
+      - mongodb
+networks:
+  network_connect:
+    external: true
+volumes:
+  mongo_data:
+  backend_logs:
