@@ -44,7 +44,7 @@ jobs:
       - name: Build Test (Important)
         run: npm run build
         env:
-          MONGO_URL: ${{ secrets.MONGO_URI_DEV }}
+          MONGO_URI_DEV: ${{ secrets.MONGO_URI_DEV }}
 
       - name: Build Docker Image
         run: docker compose -f docker-compose.dev.yml build
