@@ -1,0 +1,51 @@
+name: Buid Backend
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+    paths:
+      - "**"
+      - ".github/workflows/be_carselling_dev.yml"
+jobs:
+  build-deploy:
+    name: Build and Development Back-End
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check sysntax
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check Code
+        run: npm run lint
+
+      - name: Dockerfile Syntax Check
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Build Test (Important)
+        run: npm run build
+        env:
+          MONGO_URL: ${{ secrets.MONGO_URI_DEV }}
+
+      - name: Build Docker Image
+        run: docker compose -f docker-compose.dev.yml build
+        env:
+          MONGO_URI_DEV: ${{ secrets.MONGO_URI_DEV }}

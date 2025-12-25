@@ -8,7 +8,7 @@ import 'dotenv'
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: './env/development.env',
+      envFilePath: ['./env/development.env', './env/production.env'],
       isGlobal: true,
     }),
     MongooseModule.forRootAsync({
@@ -16,8 +16,6 @@ import 'dotenv'
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGO_URL'),
-
-
       }),
     })
   ],

@@ -10,17 +10,16 @@ services:
     volumes:
       - mongo_data:/data/db
   backend:
-    container_name: container_fronend
-    build: .
+    container_name: container_backend
+    build:
+      context: .
+      target: development
     ports:
       - "8080:8080"
     env_file:
       - ./env/development.env
-    volumes:
-      - ./:/app
-      - /app/node_modules
-      - backend_logs:/app/logs
-    command: npm run start:dev
+    environment:
+      - MONGO_URL=${MONGO_URI_DEV:-}
     networks:
       - network_connect
     depends_on:

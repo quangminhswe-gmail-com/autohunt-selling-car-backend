@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
 
 WORKDIR /app
 
@@ -6,12 +6,18 @@ COPY package*.json ./
 
 RUN npm install
 
+FROM base AS development
 COPY . .
+CMD ["npm", "run", "dev"]
 
 RUN npm run build
+FROM base AS builder
+COPY . .
+RUN npm run build
 
-FROM node:20-alpine
+RUN npm prune --production
 
+FROM node:20-alpine AS production
 WORKDIR /app
 
 USER node
