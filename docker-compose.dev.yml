@@ -1,0 +1,32 @@
+services:
+  mongodb:
+    image: 'mongo'
+    container_name: container_mongo
+    restart: "always"
+    ports: 
+    - "27017:27017"
+    env_file:
+      - ./env/env_mongo.env
+    volumes:
+      - mongo_data:/data/db
+  backend:
+    container_name: container_backend
+    build:
+      context: .
+      target: development
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./env/development.env
+    environment:
+      - MONGO_URL=${MONGO_URI_DEV:-}
+    networks:
+      - network_connect
+    depends_on:
+      - mongodb
+networks:
+  network_connect:
+    external: true
+volumes:
+  mongo_data:
+  backend_logs:
