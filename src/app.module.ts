@@ -4,27 +4,22 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    // Load environment variables (local: .env | prod: system env)
     ConfigModule.forRoot({
-      envFilePath:
-        process.env.NODE_ENV === 'production'
-          ? '.env'
-          : './env/development.env',
-
       isGlobal: true,
     }),
+
+    // MongoDB connection
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: (configService: ConfigService) => {
         const uri = configService.get<string>('MONGO_URL');
         if (!uri) {
-          throw new Error('MONGO_URL is not defined');
+          throw new Error('❌ MONGO_URL is not defined');
         }
         return { uri };
       },
     }),
   ],
-  controllers: [],
-  providers: [],
 })
 export class AppModule {}
