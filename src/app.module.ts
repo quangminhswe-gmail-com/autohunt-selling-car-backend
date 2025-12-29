@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -17,13 +18,13 @@ import { LoggerModule } from 'nestjs-pino';
         transport:
           process.env.NODE_ENV !== 'production'
             ? {
-                target: 'pino-pretty',
-                options: {
-                  colorize: true,
-                  translateTime: 'HH:MM:ss',
-                  ignore: 'pid,hostname',
-                },
-              }
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translateTime: 'HH:MM:ss',
+                ignore: 'pid,hostname',
+              },
+            }
             : undefined,
       },
     }),
@@ -33,6 +34,7 @@ import { LoggerModule } from 'nestjs-pino';
       isGlobal: true,
       // envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       // ignoreEnvFile: process.env.NODE_ENV === 'production',
+      ignoreEnvFile: process.env.NODE_ENV === 'development' && !!process.env.MONGO_URL,
     }),
 
     /* ================= DATABASE ================= */
@@ -51,6 +53,7 @@ import { LoggerModule } from 'nestjs-pino';
         };
       },
     }),
+    UsersModule
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -1,0 +1,21 @@
+services:
+  backend:
+    container_name: container_backend
+    build: 
+      context: .
+      target: production
+    ports:
+      - "8080:8080"
+    environment:
+    - MONGO_URL=${MONGO_URL_PROD}
+    restart: always
+    networks:
+      - network_connect
+networks:
+  network_connect:
+    driver: bridge
+  network_data:
+    driver: bridge
+volumes:
+  mongo_data:
+  backend_logs:

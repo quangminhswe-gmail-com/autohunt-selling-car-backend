@@ -6,6 +6,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+  app.enableCors();
 
   app.useLogger(app.get(Logger));
 
@@ -19,6 +20,6 @@ async function bootstrap() {
     logger.error({ err }, 'MongoDB connection error');
   });
 
-  await app.listen(process.env.PORT || 8000);
+  await app.listen(process.env.PORT || 8080, '0.0.0.0');
 }
 bootstrap();
