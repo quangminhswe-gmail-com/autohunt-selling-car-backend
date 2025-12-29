@@ -1,5 +1,5 @@
+dist/
+build/
+*.log
+npm-debug.log*
 node_modules
-.git
-.env
-dist
-npm-debug.log

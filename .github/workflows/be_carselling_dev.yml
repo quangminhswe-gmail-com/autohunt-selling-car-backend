@@ -1,4 +1,4 @@
-name: Buid Backend
+name: Buid Backend Dev
 on:
   push:
     branches:
@@ -9,7 +9,6 @@ on:
 
     paths:
       - "**"
-      - ".github/workflows/be_carselling_dev.yml"
 jobs:
   build-deploy:
     name: Build and Development Back-End
@@ -41,12 +40,17 @@ jobs:
         with:
           dockerfile: Dockerfile
 
-      - name: Build Test (Important)
+      - name: Build Test
         run: npm run build
         env:
-          MONGO_URI_DEV: ${{ secrets.MONGO_URI_DEV }}
+          MONGO_URL: ${{ secrets.MONGO_URL_DEV }}
+
+      - name: Create file for dev
+        run: |
+          mkdir -p ./env
+          echo "MONGO_URL=${{ secrets.MONGO_URL_DEV }}" > ./env/development.env
 
       - name: Build Docker Image
         run: docker compose -f docker-compose.dev.yml build
         env:
-          MONGO_URI_DEV: ${{ secrets.MONGO_URI_DEV }}
+          MONGO_URL: ${{ secrets.MONGO_URL_DEV }}
