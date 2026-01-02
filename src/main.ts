@@ -21,5 +21,8 @@ async function bootstrap() {
   });
 
   await app.listen(process.env.PORT || 8080, '0.0.0.0');
+  console.log(
+    `Server is running on http://localhost:${process.env.PORT || 8080}`,
+  );
 }
 bootstrap();
