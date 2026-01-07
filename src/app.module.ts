@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { UsersModule } from './modules/users/users.module';
+import { FaqModule } from './modules/faqs/faqs.module';
 
 @Module({
   imports: [
@@ -53,7 +54,8 @@ import { UsersModule } from './modules/users/users.module';
         };
       },
     }),
-    UsersModule
+    UsersModule,
+    FaqModule
   ],
 })
 export class AppModule { }

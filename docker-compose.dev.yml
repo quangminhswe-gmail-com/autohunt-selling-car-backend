@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: 'mongo'
+    image: "mongo"
     container_name: container_mongo
     restart: "always"
     env_file:
@@ -9,6 +9,8 @@ services:
       - mongo_data:/data/db
     networks:
       - network_data
+    ports:
+      - "27017:27017"
   backend:
     container_name: container_backend
     build:
