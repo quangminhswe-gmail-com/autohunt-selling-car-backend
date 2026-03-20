@@ -2,7 +2,7 @@ services:
   mongodb:
     image: 'mongo'
     container_name: container_mongo
-    restart: "always"
+    restart: 'always'
     env_file:
       - ./env/env_mongo.env
     volumes:
@@ -15,7 +15,7 @@ services:
       context: .
       target: development
     ports:
-      - "8080:8080"
+      - '8080:8080'
     volumes:
       - .:/app
       - /app/node_modules

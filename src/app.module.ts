@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
-import { UsersModule } from './modules/users/users.module';
-
+import { UsersModule } from '@/modules/users/users.module';
+import { AuthModule } from '@modules/auth/auth.module';
+import { MarketplaceModule } from './modules/marketplaces/marketplace.module';
+import { UploadModule } from './modules/upload/upload.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -18,23 +20,28 @@ import { UsersModule } from './modules/users/users.module';
         transport:
           process.env.NODE_ENV !== 'production'
             ? {
-              target: 'pino-pretty',
-              options: {
-                colorize: true,
-                translateTime: 'HH:MM:ss',
-                ignore: 'pid,hostname',
-              },
-            }
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  translateTime: 'HH:MM:ss',
+                  ignore: 'pid,hostname',
+                },
+              }
             : undefined,
       },
     }),
 
     /* ================= CONFIG ================= */
+    // ConfigModule.forRoot({
+    //   isGlobal: true,
+    //   // envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    //   // ignoreEnvFile: process.env.NODE_ENV === 'production',
+    //   ignoreEnvFile:
+    //     process.env.NODE_ENV === 'development' && !!process.env.MONGO_URL,
+    // }),
     ConfigModule.forRoot({
       isGlobal: true,
-      // envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
-      // ignoreEnvFile: process.env.NODE_ENV === 'production',
-      ignoreEnvFile: process.env.NODE_ENV === 'development' && !!process.env.MONGO_URL,
+      envFilePath: '.env',
     }),
 
     /* ================= DATABASE ================= */
@@ -48,12 +55,16 @@ import { UsersModule } from './modules/users/users.module';
 
         return {
           uri,
+          dbName: 'autohunt',
           autoIndex: process.env.NODE_ENV !== 'production',
           serverSelectionTimeoutMS: 5000,
         };
       },
     }),
-    UsersModule
+    UsersModule,
+    AuthModule,
+    MarketplaceModule,
+    UploadModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}
