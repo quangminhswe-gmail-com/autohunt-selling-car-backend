@@ -35,7 +35,7 @@ export class Posting {
   slug: string;
 
   @Prop({
-    required: true,
+    required: false,
   })
   description: string;
 

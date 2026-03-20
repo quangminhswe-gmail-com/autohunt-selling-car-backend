@@ -85,6 +85,20 @@ export class Vehicle {
   })
   features: string[];
 
+  @Prop({ required: true })
+  price: number;
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: User.name,
+    required: true,
+  })
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  images: string[];
+
   @Prop({
     type: Types.ObjectId,
     ref: User.name,

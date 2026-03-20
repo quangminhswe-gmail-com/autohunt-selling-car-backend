@@ -4,6 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { UsersModule } from '@/modules/users/users.module';
 import { AuthModule } from '@modules/auth/auth.module';
+import { MarketplaceModule } from './modules/marketplaces/marketplace.module';
+import { UploadModule } from './modules/upload/upload.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -30,12 +32,16 @@ import { AuthModule } from '@modules/auth/auth.module';
     }),
 
     /* ================= CONFIG ================= */
+    // ConfigModule.forRoot({
+    //   isGlobal: true,
+    //   // envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    //   // ignoreEnvFile: process.env.NODE_ENV === 'production',
+    //   ignoreEnvFile:
+    //     process.env.NODE_ENV === 'development' && !!process.env.MONGO_URL,
+    // }),
     ConfigModule.forRoot({
       isGlobal: true,
-      // envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
-      // ignoreEnvFile: process.env.NODE_ENV === 'production',
-      ignoreEnvFile:
-        process.env.NODE_ENV === 'development' && !!process.env.MONGO_URL,
+      envFilePath: '.env',
     }),
 
     /* ================= DATABASE ================= */
@@ -49,6 +55,7 @@ import { AuthModule } from '@modules/auth/auth.module';
 
         return {
           uri,
+          dbName: 'autohunt',
           autoIndex: process.env.NODE_ENV !== 'production',
           serverSelectionTimeoutMS: 5000,
         };
@@ -56,6 +63,8 @@ import { AuthModule } from '@modules/auth/auth.module';
     }),
     UsersModule,
     AuthModule,
+    MarketplaceModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

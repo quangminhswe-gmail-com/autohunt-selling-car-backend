@@ -39,6 +39,9 @@ export class User extends Document {
 
   @Prop({ default: 0 })
   totalPostings: number;
+
+  @Prop({ default: false })
+  isDelete: boolean;
 }
 
 export type UserDocument = User & Document;

@@ -54,9 +54,9 @@ export enum PostingStatus {
   DRAFT = 'draft',
   PENDING_APPROVAL = 'pending_approval',
   ACTIVE = 'active',
+  RESERVED = 'reserved',
   SOLD = 'sold',
   EXPIRED = 'expired',
   HIDDEN = 'hidden',
 }
 // ================ POSTINGS ===================
-

@@ -1,0 +1,44 @@
+services:
+  mongodb:
+    image: 'mongo'
+    container_name: container_mongo
+    restart: 'always'
+    env_file:
+      - ./env/env_mongo.env
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - network_data
+  backend:
+    container_name: container_backend
+    build:
+      context: .
+      target: development
+    ports:
+      - '8080:8080'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/dist
+      - backend_logs:/app/logs
+    networks:
+      - network_connect
+      - network_data
+    command: npm run start:dev
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
+      - WATCHPACK_POLLING=true
+    env_file:
+      - ./env/development.env
+    depends_on:
+      - mongodb
+networks:
+  network_connect:
+    name: network_connect
+    driver: bridge
+  network_data:
+    driver: bridge
+volumes:
+  mongo_data:
+  backend_logs:
