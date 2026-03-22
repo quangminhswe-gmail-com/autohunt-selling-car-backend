@@ -123,7 +123,7 @@ Yêu cầu bắt buộc:
       description: createPostingDto.description?.trim()
         ? `${createPostingDto.description}\n\n${aiDescription}`
         : aiDescription,
-      sellerId: userId,
+      ownerId: userId,
       slug: finalSlug,
       status: PostingStatus.ACTIVE,
     });
@@ -143,7 +143,7 @@ Yêu cầu bắt buộc:
     return this.postingModel
       .findById(id)
       .populate('vehicleId')
-      .populate('sellerId');
+      .populate('ownerId');
   }
 
   async increaseViewCount(id: string) {
@@ -152,5 +152,13 @@ Yêu cầu bắt buộc:
       { $inc: { viewCount: 1 } },
       { new: true },
     );
+  }
+
+  async findMyPostings(userId: string) {
+    return this.postingModel
+      .find({ ownerId: userId })
+      .populate('vehicleId')
+      .populate('ownerId')
+      .sort({ createdAt: -1 });
   }
 }

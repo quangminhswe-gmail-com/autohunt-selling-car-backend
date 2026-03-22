@@ -16,7 +16,7 @@ import {
   VehicleDocument,
 } from '@/modules/marketplaces/schemas/vehicle.schema';
 import { Posting, PostingDocument } from '../schemas/posting.schema';
-
+import { SearchVehicleDto } from '../dto/search-vehicle.dto';
 @Injectable()
 export class VehicleService {
   constructor(
@@ -155,4 +155,67 @@ export class VehicleService {
     return this.vehicleModel.find().sort({ createdAt: -1 });
   }
   // UC-ADM01-R	AD-ADM01	Vehicle Listing
+
+  //UC-CTM-VEH01	CTM-VEH01	Search Cars
+  async searchVehicles(query: SearchVehicleDto) {
+    const filter: any = {};
+
+    if (query.keyword) {
+      filter.$or = [
+        { make: { $regex: query.keyword, $options: 'i' } },
+        { model: { $regex: query.keyword, $options: 'i' } },
+      ];
+    }
+
+    if (query.make) {
+      filter.make = query.make;
+    }
+
+    if (query.model) {
+      filter.model = query.model;
+    }
+
+    if (query.fuelType) {
+      filter.fuelType = query.fuelType;
+    }
+
+    if (query.transmission) {
+      filter.transmission = query.transmission;
+    }
+
+    if (query.color) {
+      filter.color = query.color;
+    }
+
+    if (query.year) {
+      filter.yearOfManufacture = Number(query.year);
+    }
+
+    if (query.minPrice || query.maxPrice) {
+      filter.price = {};
+
+      if (query.minPrice) {
+        filter.price.$gte = Number(query.minPrice);
+      }
+
+      if (query.maxPrice) {
+        filter.price.$lte = Number(query.maxPrice);
+      }
+    }
+
+    return await this.vehicleModel.find(filter);
+  }
+  //UC-CTM-VEH01	CTM-VEH01	Search Cars
+
+  async getMyVehicles(ownerId: string) {
+    if (!Types.ObjectId.isValid(ownerId)) {
+      throw new BadRequestException('Invalid owner id');
+    }
+
+    return await this.vehicleModel
+      .find({
+        ownerId: new Types.ObjectId(ownerId),
+      })
+      .sort({ createdAt: -1 });
+  }
 }

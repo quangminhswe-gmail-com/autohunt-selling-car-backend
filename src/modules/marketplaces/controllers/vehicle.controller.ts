@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { VehicleService } from '../services/vehicle.service';
 import { CreateVehicleDto } from '../dto/create-vehicle.dto';
@@ -17,6 +18,7 @@ import { UpdateVehicleDto } from '../dto/update-vehicle.dto';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from '@/modules/upload/cloudinary.service';
+import { SearchVehicleDto } from '@/modules/marketplaces/dto/search-vehicle.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('vehicle')
@@ -94,4 +96,10 @@ export class VehicleController {
     return this.vehicleService.findAll();
   }
   // UC-ADM01-R	AD-ADM01	Vehicle Listing
+
+  @Get('my-vehicles')
+  @UseGuards(JwtAuthGuard)
+  getMyVehicles(@Req() req) {
+    return this.vehicleService.getMyVehicles(req.user.id);
+  }
 }

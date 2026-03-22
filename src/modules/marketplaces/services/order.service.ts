@@ -2,11 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PostingStatus } from '@/common/constants/enum';
-
+import { OrderStatus, DeliveryStatus } from '../schemas/order.schema';
 import {
   Order,
   OrderDocument,
@@ -21,6 +22,7 @@ import {
   Posting,
   PostingDocument,
 } from '@/modules/marketplaces/schemas/posting.schema';
+import { UpdateDeliveryStatusDto } from '../dto/update-delivery-status.dto';
 
 @Injectable()
 export class OrderService {
@@ -98,14 +100,155 @@ export class OrderService {
   async getMyOrders(customerId: string) {
     return this.orderModel
       .find({ customerId })
-      .populate('vehicleId')
-      .populate('postingId');
+      .populate({
+        path: 'vehicleId',
+        select: 'images price',
+      })
+      .populate({
+        path: 'postingId',
+        select: 'title status',
+      })
+      .populate({
+        path: 'ownerId',
+        select: 'email',
+      })
+      .select('-customerId -__v')
+      .sort({ createdAt: -1 });
   }
 
   async getOwnerOrders(ownerId: string) {
     return this.orderModel
-      .find({ ownerId })
-      .populate('vehicleId')
-      .populate('postingId');
+      .find({ ownerId: new Types.ObjectId(ownerId) })
+      .populate({
+        path: 'vehicleId',
+        select: 'make model images price',
+      })
+      .populate({
+        path: 'postingId',
+        select: 'title status',
+      })
+      .populate({
+        path: 'customerId',
+        select: 'email',
+      })
+      .populate({
+        path: 'ownerId',
+        select: 'email',
+      })
+      .select('-__v')
+      .sort({ createdAt: -1 });
+  }
+
+  async trackDelivery(orderId: string, userId: string) {
+    const order = await this.orderModel
+      .findById(orderId)
+      .populate({
+        path: 'vehicleId',
+        select: 'make model images',
+      })
+      .populate({
+        path: 'postingId',
+        select: 'title',
+      });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (
+      order.customerId.toString() !== userId &&
+      order.ownerId.toString() !== userId
+    ) {
+      throw new ForbiddenException('No permission');
+    }
+
+    return {
+      orderId: order._id,
+      posting: order.postingId,
+      vehicle: order.vehicleId,
+      deliveryStatus: order.deliveryStatus,
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      updatedAt: order.updatedAt,
+    };
+  }
+
+  async updateOrderStatus(
+    orderId: string,
+    orderStatus: OrderStatus,
+    ownerId: string,
+  ) {
+    const order = await this.orderModel.findById(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.ownerId.toString() !== ownerId) {
+      throw new ForbiddenException('No permission');
+    }
+
+    order.orderStatus = orderStatus;
+
+    if (
+      orderStatus === OrderStatus.COMPLETED &&
+      order.deliveryStatus !== DeliveryStatus.DELIVERED
+    ) {
+      throw new BadRequestException('Car must be delivered first');
+    }
+
+    if (orderStatus === OrderStatus.COMPLETED) {
+      order.completedAt = new Date();
+
+      await this.postingModel.findByIdAndUpdate(order.postingId, {
+        status: PostingStatus.SOLD,
+      });
+    }
+
+    if (orderStatus === OrderStatus.CANCELLED) {
+      order.cancelledAt = new Date();
+
+      await this.postingModel.findByIdAndUpdate(order.postingId, {
+        status: PostingStatus.ACTIVE,
+      });
+    }
+
+    return await order.save();
+  }
+
+  async updateDeliveryStatus(
+    orderId: string,
+    dto: UpdateDeliveryStatusDto,
+    ownerId: string,
+  ) {
+    const order = await this.orderModel.findById(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.ownerId.toString() !== ownerId) {
+      throw new ForbiddenException('No permission');
+    }
+
+    order.deliveryStatus = dto.deliveryStatus;
+
+    if (
+      order.deliveryStatus === DeliveryStatus.NOT_DELIVERED &&
+      dto.deliveryStatus === DeliveryStatus.DELIVERED
+    ) {
+      throw new BadRequestException('Must go through delivering first');
+    }
+
+    if (dto.deliveryStatus === DeliveryStatus.DELIVERED) {
+      order.orderStatus = OrderStatus.COMPLETED;
+      order.completedAt = new Date();
+
+      await this.postingModel.findByIdAndUpdate(order.postingId, {
+        status: PostingStatus.SOLD,
+      });
+    }
+
+    return await order.save();
   }
 }

@@ -18,7 +18,7 @@ export class Posting {
     ref: User.name,
     required: true,
   })
-  sellerId: Types.ObjectId;
+  ownerId: Types.ObjectId;
 
   @Prop({
     required: true,

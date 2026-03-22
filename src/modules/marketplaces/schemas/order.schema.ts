@@ -104,6 +104,9 @@ export class Order {
 
   @Prop()
   cancelReason: string;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

@@ -31,7 +31,12 @@ export class PostingController {
     return this.postingService.findAll();
   }
 
-  @Get(':id')
+  @Get('my-postings')
+  findMyPostings(@Req() req) {
+    return this.postingService.findMyPostings(req.user.id);
+  }
+
+  @Get('details/:id')
   async findOne(@Param('id') id: string) {
     await this.postingService.increaseViewCount(id);
     return this.postingService.findOne(id);

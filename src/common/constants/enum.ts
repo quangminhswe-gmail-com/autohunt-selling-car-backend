@@ -58,5 +58,6 @@ export enum PostingStatus {
   SOLD = 'sold',
   EXPIRED = 'expired',
   HIDDEN = 'hidden',
+  BLOCKED = 'blocked',
 }
 // ================ POSTINGS ===================
