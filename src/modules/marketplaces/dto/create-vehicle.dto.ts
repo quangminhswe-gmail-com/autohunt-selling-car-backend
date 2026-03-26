@@ -14,6 +14,7 @@ export class CreateVehicleDto {
   @IsString()
   model: string;
 
+  @Type(() => Number)
   @IsNumber()
   yearOfManufacture: number;
 
@@ -29,6 +30,7 @@ export class CreateVehicleDto {
   color?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   mileage?: number;
 
@@ -44,6 +46,7 @@ export class CreateVehicleDto {
   @IsEnum(['new', 'used'])
   condition: string;
 
+  @IsOptional()
   @Transform(({ value }) =>
     typeof value === 'string'
       ? value.split(',').map((item) => item.trim())
@@ -53,6 +56,7 @@ export class CreateVehicleDto {
   @IsString({ each: true })
   features?: string[];
 
+  @Type(() => Number)
   @IsNumber()
   price: number;
 
