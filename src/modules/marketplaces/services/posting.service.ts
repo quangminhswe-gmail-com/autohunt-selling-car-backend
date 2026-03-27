@@ -155,11 +155,21 @@ Yêu cầu bắt buộc:
   }
 
   async findMyPostings(userId: string) {
-    return this.postingModel
+    const postings = await this.postingModel
       .find({ ownerId: userId })
       .populate('vehicleId')
       .populate('ownerId')
       .sort({ createdAt: -1 });
+
+    // Transform vehicleId to vehicle for frontend compatibility
+    return postings.map((posting) => {
+      const plainPosting = posting.toObject();
+      return {
+        ...plainPosting,
+        vehicle: plainPosting.vehicleId,
+        vehicleId: plainPosting.vehicleId?._id, // Keep original vehicleId as reference
+      };
+    });
   }
 
   async removePosting(postingId: string, userId: string) {
