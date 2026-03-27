@@ -6,6 +6,7 @@ import { UsersModule } from '@/modules/users/users.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { MarketplaceModule } from './modules/marketplaces/marketplace.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { SupportModule } from './modules/support/support.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -65,6 +66,7 @@ import { UploadModule } from './modules/upload/upload.module';
     AuthModule,
     MarketplaceModule,
     UploadModule,
+    SupportModule,
   ],
 })
 export class AppModule {}
