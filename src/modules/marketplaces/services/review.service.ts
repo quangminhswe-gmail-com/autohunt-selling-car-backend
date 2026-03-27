@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import {
   Order,
@@ -69,5 +69,15 @@ export class ReviewService {
     });
 
     return await review.save();
+  }
+
+  async getMyReviews(customerId: string) {
+    return await this.reviewModel
+      .find({
+        customerId: new Types.ObjectId(customerId),
+      })
+      .populate('vehicleId', 'make model images')
+      .populate('ownerId', 'fullName email')
+      .sort({ createdAt: -1 });
   }
 }

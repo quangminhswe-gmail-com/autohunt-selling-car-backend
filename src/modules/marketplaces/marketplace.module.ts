@@ -33,6 +33,8 @@ import { OrderController } from './controllers/order.controller';
 import { Review, ReviewSchema } from './schemas/review.schema';
 import { ReviewService } from './services/review.service';
 import { ReviewController } from './controllers/review.controller';
+import { AdminReviewsService } from './services/admin-review.service';
+import { AdminReviewsController } from './controllers/admin-review.controller';
 //Review Module
 //==================================================================
 @Module({
@@ -52,6 +54,7 @@ import { ReviewController } from './controllers/review.controller';
     AdminPostingService,
     OrderService,
     ReviewService,
+    AdminReviewsService,
   ],
   controllers: [
     VehicleController,
@@ -61,6 +64,7 @@ import { ReviewController } from './controllers/review.controller';
     AdminPostingController,
     OrderController,
     ReviewController,
+    AdminReviewsController,
   ],
 })
 export class MarketplaceModule {}
