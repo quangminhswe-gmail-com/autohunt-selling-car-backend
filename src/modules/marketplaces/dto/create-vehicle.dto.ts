@@ -14,6 +14,7 @@ export class CreateVehicleDto {
   @IsString()
   model: string;
 
+  @Type(() => Number)
   @IsNumber()
   yearOfManufacture: number;
 
@@ -29,6 +30,7 @@ export class CreateVehicleDto {
   color?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   mileage?: number;
 
@@ -53,6 +55,7 @@ export class CreateVehicleDto {
   @IsString({ each: true })
   features?: string[];
 
+  @Type(() => Number)
   @IsNumber()
   price: number;
 

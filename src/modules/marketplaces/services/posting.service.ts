@@ -21,6 +21,7 @@ import { CreatePostingDto } from '@/modules/marketplaces/dto/create-posting.dto'
 import { PostingStatus } from '@/common/constants/enum';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { UpdatePostingDto } from '../dto/update-posting.dto';
 
 @Injectable()
 export class PostingService {
@@ -140,10 +141,20 @@ Yêu cầu bắt buộc:
   }
 
   async findOne(id: string) {
-    return this.postingModel
+    const posting = await this.postingModel
       .findById(id)
       .populate('vehicleId')
-      .populate('ownerId');
+      .populate('ownerId')
+      .lean();
+
+    if (!posting) return null;
+
+    return {
+      id: posting._id?.toString(),
+      ...posting,
+      vehicle: posting.vehicleId,
+      vehicleId: undefined,
+    };
   }
 
   async increaseViewCount(id: string) {
@@ -155,10 +166,88 @@ Yêu cầu bắt buộc:
   }
 
   async findMyPostings(userId: string) {
-    return this.postingModel
+    const postings = await this.postingModel
       .find({ ownerId: userId })
       .populate('vehicleId')
       .populate('ownerId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return postings.map(posting => ({
+      id: posting._id?.toString(),
+      ...posting,
+      vehicle: posting.vehicleId,
+      vehicleId: undefined, // remove the vehicleId field
+    }));
+  }
+
+  async removePosting(postingId: string, userId: string) {
+    const session = await this.postingModel.db.startSession();
+    session.startTransaction();
+
+    try {
+      const posting = await this.postingModel
+        .findById(postingId)
+        .session(session);
+
+      if (!posting) {
+        throw new BadRequestException('Posting not found');
+      }
+
+      if (posting.ownerId.toString() !== userId) {
+        throw new BadRequestException('No permission');
+      }
+
+      await this.vehicleModel
+        .findByIdAndDelete(posting.vehicleId)
+        .session(session);
+      await this.postingModel.findByIdAndDelete(postingId).session(session);
+
+      await session.commitTransaction();
+
+      return {
+        message: 'Deleted successfully',
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async updatePosting(
+    postingId: string,
+    dto: UpdatePostingDto,
+    userId: string,
+  ) {
+    const posting = await this.postingModel.findById(postingId);
+
+    if (!posting) {
+      throw new BadRequestException('Posting not found');
+    }
+
+    if (posting.ownerId.toString() !== userId) {
+      throw new BadRequestException('No permission');
+    }
+
+    if (dto.title) {
+      const slug = slugify(dto.title, {
+        lower: true,
+        strict: true,
+      });
+
+      posting.slug = `${slug}-${Date.now()}`;
+    }
+
+    Object.keys(dto).forEach(
+      (key) => dto[key] === undefined && delete dto[key],
+    );
+
+    Object.assign(posting, dto);
+
+    return posting.save();
   }
 }
+
+
