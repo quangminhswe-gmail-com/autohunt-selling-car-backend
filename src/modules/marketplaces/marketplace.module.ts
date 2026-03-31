@@ -36,6 +36,9 @@ import { ReviewController } from './controllers/review.controller';
 import { AdminReviewsService } from './services/admin-review.service';
 import { AdminReviewsController } from './controllers/admin-review.controller';
 //Review Module
+
+//User
+import { User, UserSchema } from '../users/user.schema';
 //==================================================================
 @Module({
   imports: [
@@ -44,6 +47,7 @@ import { AdminReviewsController } from './controllers/admin-review.controller';
       { name: Posting.name, schema: PostingSchema },
       { name: Order.name, schema: OrderSchema },
       { name: Review.name, schema: ReviewSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     UploadModule,
   ],

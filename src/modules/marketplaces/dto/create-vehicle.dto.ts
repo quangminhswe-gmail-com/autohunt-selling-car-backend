@@ -6,6 +6,12 @@ import {
   IsString,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import {
+  TransmissionType,
+  VehicleType,
+  FuelType,
+  VehicleCondition,
+} from '@/common/constants/enum';
 
 export class CreateVehicleDto {
   @IsString()
@@ -34,16 +40,16 @@ export class CreateVehicleDto {
   @IsNumber()
   mileage?: number;
 
-  @IsEnum(['automatic', 'manual', 'cvt'])
+  @IsEnum(TransmissionType)
   transmission: string;
 
-  @IsEnum(['sedan', 'suv', 'pickup', 'hatchback', 'mpv'])
+  @IsEnum(VehicleType)
   type: string;
 
-  @IsEnum(['petrol', 'diesel', 'electric', 'hybrid'])
+  @IsEnum(FuelType)
   fuelType: string;
 
-  @IsEnum(['new', 'used'])
+  @IsEnum(VehicleCondition)
   condition: string;
 
   @IsOptional()
