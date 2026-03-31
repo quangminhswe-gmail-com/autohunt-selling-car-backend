@@ -251,4 +251,50 @@ export class OrderService {
 
     return await order.save();
   }
+
+  async updatePaymentStatus(
+    orderId: string,
+    paymentStatus: string,
+    ownerId: string,
+  ) {
+    const order = await this.orderModel.findById(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.ownerId.toString() !== ownerId) {
+      throw new ForbiddenException('No permission');
+    }
+
+    const validStatuses = Object.values(PaymentStatus);
+    if (!validStatuses.includes(paymentStatus as PaymentStatus)) {
+      throw new BadRequestException(
+        `Invalid payment status. Allowed values: ${validStatuses.join(', ')}`,
+      );
+    }
+
+    order.paymentStatus = paymentStatus as PaymentStatus;
+    await order.save();
+
+    return await this.orderModel
+      .findById(orderId)
+      .populate({
+        path: 'vehicleId',
+        select:
+          'make model yearOfManufacture mileage color transmission type fuelType images price',
+      })
+      .populate({
+        path: 'postingId',
+        select: 'title status',
+      })
+      .populate({
+        path: 'customerId',
+        select: '_id email',
+      })
+      .populate({
+        path: 'ownerId',
+        select: '_id email',
+      });
+  }
 }

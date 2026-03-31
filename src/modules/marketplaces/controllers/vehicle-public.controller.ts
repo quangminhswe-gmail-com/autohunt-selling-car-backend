@@ -6,6 +6,11 @@ import { SearchVehicleDto } from '../dto/search-vehicle.dto';
 export class VehiclePublicController {
   constructor(private readonly vehicleService: VehicleService) {}
 
+  @Get()
+  getAllVehicles() {
+    return this.vehicleService.findAll();
+  }
+
   // UC-CTM-VEH01 || Search Cars (Public)
   @Get('search')
   searchVehicles(@Query() query: SearchVehicleDto) {

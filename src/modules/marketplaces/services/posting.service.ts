@@ -135,7 +135,7 @@ Yêu cầu bắt buộc:
     return this.postingModel
       .find()
       .populate('vehicleId')
-      .populate('sellerId')
+      .populate('ownerId')
       .sort({ createdAt: -1 });
   }
 

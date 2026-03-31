@@ -7,6 +7,7 @@ import { AuthModule } from '@modules/auth/auth.module';
 import { MarketplaceModule } from './modules/marketplaces/marketplace.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { SupportModule } from './modules/support/support.module';
+import { NotificationModule } from './modules/notifications/notification.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -67,6 +68,7 @@ import { SupportModule } from './modules/support/support.module';
     MarketplaceModule,
     UploadModule,
     SupportModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

@@ -17,6 +17,7 @@ import {
 } from '@/modules/marketplaces/schemas/vehicle.schema';
 import { Posting, PostingDocument } from '../schemas/posting.schema';
 import { SearchVehicleDto } from '../dto/search-vehicle.dto';
+import { PostingStatus } from '@/common/constants/enum';
 @Injectable()
 export class VehicleService {
   constructor(
@@ -29,20 +30,6 @@ export class VehicleService {
 
   /* ===================== CRUD ===================== */
 
-  // UC-ADM01-C ||	AD-ADM01 ||Create Vehicle
-  // async createVehicle(dto: CreateVehicleDto, ownerId: string) {
-  //   try {
-  //     const vehicle = new this.vehicleModel({
-  //       ...dto,
-  //       ownerId: new Types.ObjectId(ownerId),
-  //     });
-
-  //     return await vehicle.save();
-  //   } catch (error) {
-  //     console.error(error);
-  //     throw new InternalServerErrorException('Tạo xe thất bại');
-  //   }
-  // }
   async createVehicle(
     dto: CreateVehicleDto,
     ownerId: string,
@@ -152,7 +139,15 @@ export class VehicleService {
 
   // UC-ADM01-R	AD-ADM01	Vehicle Listing
   async findAll() {
-    return this.vehicleModel.find().sort({ createdAt: -1 });
+    const postings = await this.postingModel.find({
+      status: PostingStatus.ACTIVE,
+    });
+
+    const vehicleIds = postings.map((p) => p.vehicleId);
+
+    return await this.vehicleModel.find({
+      _id: { $in: vehicleIds },
+    });
   }
   // UC-ADM01-R	AD-ADM01	Vehicle Listing
 

@@ -66,4 +66,17 @@ export class OrderController {
   ) {
     return this.orderService.updateDeliveryStatus(id, dto, req.user.id);
   }
+
+  @Patch(':id/payment-status')
+  updatePaymentStatus(
+    @Param('id') id: string,
+    @Body('paymentStatus') paymentStatus: string,
+    @Req() req,
+  ) {
+    return this.orderService.updatePaymentStatus(
+      id,
+      paymentStatus,
+      req.user.id,
+    );
+  }
 }
