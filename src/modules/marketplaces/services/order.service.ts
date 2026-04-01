@@ -139,6 +139,47 @@ export class OrderService {
       .sort({ createdAt: -1 });
   }
 
+  private async getPopulatedOrder(orderId: string) {
+    return this.orderModel
+      .findById(orderId)
+      .populate({
+        path: 'vehicleId',
+        select:
+          'make model images price yearOfManufacture mileage location color transmission type fuelType',
+      })
+      .populate({
+        path: 'postingId',
+        select: 'title status description',
+      })
+      .populate({
+        path: 'customerId',
+        select: 'email firstName lastName',
+      })
+      .populate({
+        path: 'ownerId',
+        select: 'email firstName lastName',
+      })
+      .select('-__v');
+  }
+
+  async getOrderById(orderId: string, userId: string) {
+    const order = await this.getPopulatedOrder(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Check if user is customer or owner
+    if (
+      order.customerId._id.toString() !== userId &&
+      order.ownerId._id.toString() !== userId
+    ) {
+      throw new ForbiddenException('You are not authorized to view this order');
+    }
+
+    return order;
+  }
+
   async trackDelivery(orderId: string, userId: string) {
     const order = await this.orderModel
       .findById(orderId)
@@ -213,7 +254,8 @@ export class OrderService {
       });
     }
 
-    return await order.save();
+    await order.save();
+    return this.getPopulatedOrder(orderId);
   }
 
   async updateDeliveryStatus(
@@ -249,7 +291,8 @@ export class OrderService {
       });
     }
 
-    return await order.save();
+    await order.save();
+    return this.getPopulatedOrder(orderId);
   }
 
   async updatePaymentStatus(

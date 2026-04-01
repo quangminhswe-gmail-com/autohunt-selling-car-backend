@@ -131,19 +131,52 @@ Yêu cầu bắt buộc:
     return posting;
   }
 
+  // async findAll() {
+  //   return this.postingModel
+  //     .find()
+  //     .populate('vehicleId')
+  //     .populate('ownerId')
+  //     .sort({ createdAt: -1 });
+  // }
   async findAll() {
-    return this.postingModel
+    const postings = await this.postingModel
       .find()
       .populate('vehicleId')
       .populate('ownerId')
       .sort({ createdAt: -1 });
+
+    return postings.map((posting) => {
+      const plainPosting = posting.toObject();
+      return {
+        ...plainPosting,
+        vehicle: plainPosting.vehicleId,
+        vehicleId: plainPosting.vehicleId?._id,
+      };
+    });
   }
 
+  // async findOne(id: string) {
+  //   return this.postingModel
+  //     .findById(id)
+  //     .populate('vehicleId')
+  //     .populate('ownerId');
+  // }
+
   async findOne(id: string) {
-    return this.postingModel
+    const posting = await this.postingModel
       .findById(id)
       .populate('vehicleId')
       .populate('ownerId');
+
+    if (!posting) return null;
+
+    const plainPosting = posting.toObject();
+
+    return {
+      ...plainPosting,
+      vehicle: plainPosting.vehicleId,
+      vehicleId: plainPosting.vehicleId?._id,
+    };
   }
 
   async increaseViewCount(id: string) {

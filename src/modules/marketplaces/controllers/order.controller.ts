@@ -40,6 +40,13 @@ export class OrderController {
     return this.orderService.getOwnerOrders(ownerId);
   }
 
+  @Get(':id')
+  getOrderById(@Param('id') orderId: string, @Req() req) {
+    const userId = req.user.id || req.user.sub;
+
+    return this.orderService.getOrderById(orderId, userId);
+  }
+
   @Get(':id/track-delivery')
   trackDelivery(@Param('id') orderId: string, @Req() req) {
     return this.orderService.trackDelivery(orderId, req.user.id);

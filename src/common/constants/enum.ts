@@ -73,21 +73,42 @@ export enum TransmissionType {
   AUTOMATIC = 'automatic',
   MANUAL = 'manual',
   CVT = 'cvt',
+  DUAL_CLUTCH = 'dual-clutch',
+  SEMI_AUTOMATIC = 'semi-automatic',
+  AMT = 'amt',
 }
 
 export enum VehicleType {
   SEDAN = 'sedan',
   SUV = 'suv',
-  PICKUP = 'pickup',
   HATCHBACK = 'hatchback',
+  COUPE = 'coupe',
+  CONVERTIBLE = 'convertible',
+  WAGON = 'wagon',
+  PICKUP_TRUCK = 'pickup truck',
+  MINIVAN = 'minivan',
+  CROSSOVER = 'crossover',
+  ROADSTER = 'roadster',
+  VAN = 'van',
+  LUXURY_SEDAN = 'luxury sedan',
+  SPORTS_CAR = 'sports car',
+  COMPACT_CAR = 'compact car',
+  MIDSIZE_CAR = 'midsize car',
+  FULL_SIZE_CAR = 'full-size car',
+  SUBCOMPACT_CAR = 'subcompact car',
   MPV = 'mpv',
 }
 
 export enum FuelType {
   PETROL = 'petrol',
+  GASOLINE = 'gasoline',
   DIESEL = 'diesel',
   ELECTRIC = 'electric',
   HYBRID = 'hybrid',
+  PLUG_IN_HYBRID = 'plug-in hybrid',
+  CNG = 'cng',
+  LPG = 'lpg',
+  HYDROGEN = 'hydrogen',
 }
 
 export enum VehicleCondition {
