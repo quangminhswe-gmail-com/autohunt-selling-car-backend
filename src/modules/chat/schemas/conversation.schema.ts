@@ -5,7 +5,7 @@ export type ConversationDocument = HydratedDocument<Conversation>;
 
 @Schema({ timestamps: true })
 export class Conversation {
-  @Prop([{ type: Types.ObjectId, ref: 'User' }])
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
   participants!: Types.ObjectId[];
 
   @Prop()

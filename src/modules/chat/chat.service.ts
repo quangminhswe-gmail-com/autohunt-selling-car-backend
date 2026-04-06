@@ -60,7 +60,7 @@ export class ChatService {
       .find({
         participants: new Types.ObjectId(userId),
       })
-      .populate('participants', 'fullName email');
+      .populate('participants', 'firstName lastName email');
   }
 
   async getMessages(conversationId: string) {
@@ -72,11 +72,26 @@ export class ChatService {
       .find({
         conversationId: new Types.ObjectId(conversationId),
       })
-      .populate('senderId', 'fullName email')
+      .populate('senderId', 'firstName lastName email')
       .sort({ createdAt: 1 });
   }
 
   async saveMessage(data: any) {
+    const conversation = await this.conversationModel.findById(
+      data.conversationId,
+    );
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    if (
+      !conversation.participants.some(
+        (participant) => participant.toString() === data.senderId,
+      )
+    ) {
+      throw new BadRequestException('You are not part of this conversation');
+    }
+
     const saved = await this.messageModel.create({
       conversationId: new Types.ObjectId(data.conversationId),
       senderId: new Types.ObjectId(data.senderId),
@@ -85,8 +100,11 @@ export class ChatService {
 
     await this.conversationModel.findByIdAndUpdate(data.conversationId, {
       lastMessage: data.content,
+      updatedAt: new Date(),
     });
 
-    return saved;
+    return await this.messageModel
+      .findById(saved._id)
+      .populate('senderId', 'firstName lastName email');
   }
 }

@@ -30,4 +30,17 @@ export class ChatController {
   getMessages(@Param('conversationId') id: string) {
     return this.chatService.getMessages(id);
   }
+
+  @Post(':conversationId/messages')
+  sendMessage(
+    @Param('conversationId') conversationId: string,
+    @Body() dto: { content: string },
+    @Req() req,
+  ) {
+    return this.chatService.saveMessage({
+      conversationId,
+      senderId: req.user.id,
+      content: dto.content,
+    });
+  }
 }
