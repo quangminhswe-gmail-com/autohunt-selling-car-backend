@@ -41,6 +41,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "nestjs-pino": "^4.5.0",
     "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "pino-http": "^11.0.0",
     "pino-pretty": "^13.1.3",

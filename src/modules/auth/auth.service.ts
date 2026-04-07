@@ -60,6 +60,10 @@ export class AuthService {
       email: dto.email.toLowerCase(),
     });
 
+    if (user?.provider === 'google') {
+      throw new UnauthorizedException('Please login with Google');
+    }
+
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -93,6 +97,42 @@ export class AuthService {
         sellerStatus: user.sellerStatus,
         avatarUrl: user.avatarUrl,
       },
+    };
+  }
+
+  async googleLogin(userData: any) {
+    let user = await this.userModel.findOne({
+      email: userData.email.toLowerCase(),
+    });
+
+    if (!user) {
+      user = await this.userModel.create({
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        avatarUrl: userData.avatarUrl,
+        provider: 'google',
+        providerId: userData.providerId,
+        role: UserRole.CUSTOMER,
+        sellerStatus: SellerStatus.NONE,
+        isEmailVerified: true,
+        isActive: true,
+        rating: 0,
+        totalPostings: 0,
+      });
+    }
+
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return {
+      accessToken,
+      user,
     };
   }
 }

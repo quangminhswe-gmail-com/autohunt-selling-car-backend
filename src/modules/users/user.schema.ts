@@ -7,7 +7,7 @@ export class User extends Document {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop()
   password: string;
 
   @Prop({ required: true, trim: true })
@@ -42,6 +42,12 @@ export class User extends Document {
 
   @Prop({ default: false })
   isDelete: boolean;
+
+  @Prop({ default: 'local' })
+  provider: string;
+
+  @Prop()
+  providerId: string;
 }
 
 export type UserDocument = User & Document;
