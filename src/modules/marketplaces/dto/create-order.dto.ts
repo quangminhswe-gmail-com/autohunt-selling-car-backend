@@ -1,4 +1,11 @@
-import { IsMongoId, IsNumber, IsOptional, IsEnum, Min } from 'class-validator';
+import {
+  IsMongoId,
+  IsNumber,
+  IsOptional,
+  IsEnum,
+  IsString,
+  Min,
+} from 'class-validator';
 import { PaymentMethod } from '@/modules/marketplaces/schemas/order.schema';
 
 export class CreateOrderDto {
@@ -20,4 +27,16 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  customerName?: string;
+
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  deliveryAddress?: string;
 }

@@ -12,6 +12,7 @@ import {
 import { UsersService } from '@modules/users/users.service';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -35,6 +36,11 @@ export class CustomerUsersController {
   @Patch('me')
   updateProfile(@Req() req, @Body() dto: UpdateUserDto) {
     return this.userService.updateProfile(req.user.id, dto);
+  }
+
+  @Patch('me/password')
+  changePassword(@Req() req, @Body() dto: ChangePasswordDto) {
+    return this.userService.changePassword(req.user.id, dto);
   }
   //UC-CTM-ACC01-U ||	CTM-ACC01 ||	Edit Account Information
 }

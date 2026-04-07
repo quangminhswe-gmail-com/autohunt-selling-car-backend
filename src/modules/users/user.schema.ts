@@ -16,8 +16,11 @@ export class User extends Document {
   @Prop({ required: true, trim: true })
   lastName: string;
 
-  @Prop({ default: false, trim: true })
+  @Prop({ default: '', trim: true })
   phoneNumber: string;
+
+  @Prop({ default: '' })
+  deliveryAddress: string;
 
   @Prop({ type: String, enum: UserRole, default: UserRole.CUSTOMER })
   role: UserRole;

@@ -23,6 +23,7 @@ import {
   PostingDocument,
 } from '@/modules/marketplaces/schemas/posting.schema';
 import { UpdateDeliveryStatusDto } from '../dto/update-delivery-status.dto';
+import { User, UserDocument } from '@/modules/users/user.schema';
 
 @Injectable()
 export class OrderService {
@@ -35,6 +36,9 @@ export class OrderService {
 
     @InjectModel(Posting.name)
     private readonly postingModel: Model<PostingDocument>,
+
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   async createOrder(dto: CreateOrderDto, customerId: string) {
@@ -62,6 +66,33 @@ export class OrderService {
       throw new BadRequestException('Invalid customerId');
     }
 
+    const customer = await this.userModel
+      .findById(customerId)
+      .select('firstName lastName phoneNumber deliveryAddress');
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    const customerName =
+      dto.customerName?.trim() ||
+      [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim();
+    const customerPhone = dto.customerPhone?.trim() || customer.phoneNumber;
+    const deliveryAddress =
+      dto.deliveryAddress?.trim() || customer.deliveryAddress;
+
+    if (!customerName) {
+      throw new BadRequestException('Customer name is required');
+    }
+
+    if (!customerPhone) {
+      throw new BadRequestException('Customer phone number is required');
+    }
+
+    if (!deliveryAddress) {
+      throw new BadRequestException('Delivery address is required');
+    }
+
     const paymentStatus =
       dto.depositAmount && dto.depositAmount > 0
         ? PaymentStatus.PARTIALLY_PAID
@@ -72,6 +103,9 @@ export class OrderService {
       vehicleId: dto.vehicleId,
       customerId: customerId,
       ownerId: vehicle.ownerId,
+      customerName,
+      customerPhone,
+      deliveryAddress,
 
       agreedPrice: dto.agreedPrice,
       depositAmount: dto.depositAmount || 0,

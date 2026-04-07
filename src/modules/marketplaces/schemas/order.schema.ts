@@ -45,6 +45,15 @@ export class Order {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   ownerId: Types.ObjectId;
 
+  @Prop()
+  customerName: string;
+
+  @Prop()
+  customerPhone: string;
+
+  @Prop()
+  deliveryAddress: string;
+
   @Prop({ required: true, min: 0 })
   agreedPrice: number;
 

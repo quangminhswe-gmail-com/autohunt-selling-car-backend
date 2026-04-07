@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 import { User } from '@/modules/users/user.schema';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
@@ -95,6 +97,32 @@ export class UsersService {
     }
 
     return updatedUser;
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.password) {
+      throw new BadRequestException(
+        'Password change is not available for this account',
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      dto.currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    user.password = hashedPassword;
+    return user.save();
   }
   //UC-CTM-ACC01-U ||	CTM-ACC01 ||	Edit Account Information
 }
