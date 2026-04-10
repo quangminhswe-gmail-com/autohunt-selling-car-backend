@@ -45,49 +45,75 @@ export class PostingService {
   }
 
   async generateMarketingContent(vehicle: VehicleDocument): Promise<string> {
-    try {
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-      });
+    const models = [
+      'gemini-2.5-flash',
+      'gemini-1.5-flash',
+      'gemini-2.5-flash-lite',
+    ];
+    // const model = this.genAI.getGenerativeModel({
+    //   model: ['gemini-2.5-flash', 'gemini-1.5-flash'],
+    // });
 
-      const prompt = `
+    const prompt = `
 Bạn là chuyên gia viết nội dung quảng cáo xe hơi cho nền tảng AutoHunt.
 
 Dữ liệu xe:
-- Hãng xe: ${vehicle.make}
-- Dòng xe: ${vehicle.model}
-- Năm sản xuất: ${vehicle.yearOfManufacture}
-- Tình trạng: ${vehicle.condition}
+- Hãng xe: ${vehicle.make ?? 'Không rõ'}
+- Dòng xe: ${vehicle.model ?? 'Không rõ'}
+- Năm sản xuất: ${vehicle.yearOfManufacture ?? 'Không rõ'}
+- Tình trạng: ${vehicle.condition ?? 'Không rõ'}
 - Số km đã đi: ${vehicle.mileage ?? 0} km
-- Màu sắc: ${vehicle.color}
-- Trang bị: ${vehicle.features?.join(', ') || 'Không có'}
+- Màu sắc: ${vehicle.color ?? 'Không rõ'}
+- Trang bị: ${Array.isArray(vehicle.features) ? vehicle.features.join(', ') : 'Không có'}
 
 Yêu cầu bắt buộc:
 1. Viết bằng tiếng Việt chuyên nghiệp, tự nhiên.
 2. Không bịa thêm thông tin ngoài dữ liệu cung cấp.
 3. Nội dung tối đa 180 từ.
 4. Format đúng như sau:
-
-[Headline có emoji]
-
 [Mở bài 2 câu tạo cảm xúc]
-
 Ưu điểm nổi bật:
 - bullet 1
 - bullet 2
 - bullet 3
-
 [CTA rõ ràng mời liên hệ]
-
 5. Headline phải hấp dẫn như bài đăng marketplace thật.
+6. Chỉ trả về nội dung cuối cùng, không giải thích thêm.
+7. Không dùng markdown.
+8. Không thêm tiêu đề ngoài format yêu cầu.
+9. Không giải thích
+10. Đúng format marketplace
 `;
+    for (const modelName of models) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const model = this.genAI.getGenerativeModel({
+            model: modelName,
+          });
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
-    } catch (error) {
-      console.error(error);
-      throw new InternalServerErrorException('Không thể kết nối AI');
+          const result = await model.generateContent(prompt);
+
+          const text = result?.response?.text();
+
+          if (!text) {
+            throw new Error('Empty AI response');
+          }
+
+          return text;
+        } catch (error: any) {
+          // const result = await model.generateContent(prompt);
+          // return result.response.text();
+          console.error(
+            `[AI ERROR] model=${modelName} attempt=${attempt}`,
+            error?.message,
+          );
+
+          // nếu là lần retry cuối của model này → chuyển model khác
+          if (attempt === 2) break;
+        }
+      }
     }
+    throw new InternalServerErrorException('AI service unavailable');
   }
 
   async create(createPostingDto: CreatePostingDto, userId: string) {
