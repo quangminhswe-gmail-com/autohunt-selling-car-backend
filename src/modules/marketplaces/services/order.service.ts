@@ -374,4 +374,37 @@ export class OrderService {
         select: '_id email',
       });
   }
+
+  async getAllOrdersForAdmin() {
+    return this.orderModel
+      .find()
+      .populate({
+        path: 'vehicleId',
+        select: 'make model images price',
+      })
+      .populate({
+        path: 'postingId',
+        select: 'title status',
+      })
+      .populate({
+        path: 'customerId',
+        select: 'email firstName lastName',
+      })
+      .populate({
+        path: 'ownerId',
+        select: 'email firstName lastName',
+      })
+      .select('-__v')
+      .sort({ createdAt: -1 });
+  }
+
+  async getOrderByIdForAdmin(orderId: string) {
+    const order = await this.getPopulatedOrder(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return order;
+  }
 }

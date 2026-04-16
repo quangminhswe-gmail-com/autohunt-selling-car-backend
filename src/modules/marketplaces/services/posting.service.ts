@@ -116,45 +116,97 @@ Yêu cầu bắt buộc:
     throw new InternalServerErrorException('AI service unavailable');
   }
 
+  // async create(createPostingDto: CreatePostingDto, userId: string) {
+  //   const vehicle = await this.vehicleModel.findById(
+  //     createPostingDto.vehicleId,
+  //   );
+
+  //   if (!vehicle) {
+  //     throw new BadRequestException('Vehicle not found');
+  //   }
+
+  //   const existingPosting = await this.postingModel.findOne({
+  //     vehicleId: createPostingDto.vehicleId,
+  //   });
+
+  //   if (existingPosting) {
+  //     throw new BadRequestException('This vehicle already has a posting');
+  //   }
+
+  //   const slug = slugify(createPostingDto.title, {
+  //     lower: true,
+  //     strict: true,
+  //   });
+
+  //   const existingSlug = await this.postingModel.findOne({ slug });
+
+  //   const finalSlug = `${slug}-${Date.now()}`;
+
+  //   const aiDescription = await this.generateMarketingContent(vehicle);
+
+  //   const posting = await this.postingModel.create({
+  //     ...createPostingDto,
+  //     description: createPostingDto.description?.trim()
+  //       ? `${createPostingDto.description}\n\n${aiDescription}`
+  //       : aiDescription,
+  //     ownerId: userId,
+  //     slug: finalSlug,
+  //     status: PostingStatus.ACTIVE,
+  //   });
+
+  //   return posting;
+  // }
+
   async create(createPostingDto: CreatePostingDto, userId: string) {
-    const vehicle = await this.vehicleModel.findById(
-      createPostingDto.vehicleId,
-    );
+    let vehicle: any = null;
 
-    if (!vehicle) {
-      throw new BadRequestException('Vehicle not found');
+    try {
+      vehicle = await this.vehicleModel.findById(createPostingDto.vehicleId);
+
+      if (!vehicle) {
+        throw new BadRequestException('Vehicle not found');
+      }
+
+      const existingPosting = await this.postingModel.findOne({
+        vehicleId: createPostingDto.vehicleId,
+      });
+
+      if (existingPosting) {
+        throw new BadRequestException('This vehicle already has a posting');
+      }
+
+      const slug = slugify(createPostingDto.title, {
+        lower: true,
+        strict: true,
+      });
+
+      const finalSlug = `${slug}-${Date.now()}`;
+
+      // ⚠️ AI có thể fail
+      const aiDescription = await this.generateMarketingContent(vehicle);
+
+      const posting = await this.postingModel.create({
+        ...createPostingDto,
+        description: createPostingDto.description?.trim()
+          ? `${createPostingDto.description}\n\n${aiDescription}`
+          : aiDescription,
+        ownerId: userId,
+        slug: finalSlug,
+        status: PostingStatus.ACTIVE,
+      });
+
+      return posting;
+    } catch (error) {
+      console.error('[CREATE POSTING ERROR]', error?.message);
+
+      // 🔥 rollback: xóa vehicle nếu có
+      if (vehicle?._id) {
+        await this.vehicleModel.findByIdAndDelete(vehicle._id);
+        console.log('[ROLLBACK] Vehicle deleted:', vehicle._id);
+      }
+
+      throw error;
     }
-
-    const existingPosting = await this.postingModel.findOne({
-      vehicleId: createPostingDto.vehicleId,
-    });
-
-    if (existingPosting) {
-      throw new BadRequestException('This vehicle already has a posting');
-    }
-
-    const slug = slugify(createPostingDto.title, {
-      lower: true,
-      strict: true,
-    });
-
-    const existingSlug = await this.postingModel.findOne({ slug });
-
-    const finalSlug = `${slug}-${Date.now()}`;
-
-    const aiDescription = await this.generateMarketingContent(vehicle);
-
-    const posting = await this.postingModel.create({
-      ...createPostingDto,
-      description: createPostingDto.description?.trim()
-        ? `${createPostingDto.description}\n\n${aiDescription}`
-        : aiDescription,
-      ownerId: userId,
-      slug: finalSlug,
-      status: PostingStatus.ACTIVE,
-    });
-
-    return posting;
   }
 
   // async findAll() {

@@ -26,6 +26,7 @@ import { UploadModule } from '../upload/upload.module';
 import { Order, OrderSchema } from './schemas/order.schema';
 import { OrderService } from './services/order.service';
 import { OrderController } from './controllers/order.controller';
+import { AdminOrderController } from './controllers/admin-order.controller';
 //Order Module
 //==================================================================
 
@@ -67,6 +68,7 @@ import { User, UserSchema } from '../users/user.schema';
     PostingController,
     AdminPostingController,
     OrderController,
+    AdminOrderController,
     ReviewController,
     AdminReviewsController,
   ],

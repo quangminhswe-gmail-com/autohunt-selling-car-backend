@@ -67,9 +67,11 @@ export class VehicleService {
       });
 
       return await vehicle.save();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('SAVE ERROR:', error);
-      throw new InternalServerErrorException(error.message);
+      if (error instanceof Error) {
+        throw new InternalServerErrorException(error?.message);
+      }
     }
   }
   // UC-ADM01-C ||	AD-ADM01 ||Create Vehicle
