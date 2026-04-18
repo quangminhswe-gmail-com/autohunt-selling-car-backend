@@ -24,6 +24,11 @@ export class AdminSupportController {
     return this.supportService.getAllRequests();
   }
 
+  @Get(':id/messages')
+  getMessages(@Param('id') id) {
+    return this.supportService.getMessages(id);
+  }
+
   @Post(':id/reply')
   reply(@Param('id') id, @Body() dto, @Req() req) {
     return this.supportService.reply(id, dto, req.user.id, 'admin');
