@@ -71,6 +71,16 @@ export class SupportService {
       throw new NotFoundException('Support request not found');
     }
 
+    // Prevent replies if ticket is resolved or closed
+    if (
+      request.status === SupportStatus.RESOLVED ||
+      request.status === SupportStatus.CLOSED
+    ) {
+      throw new BadRequestException(
+        'Cannot reply to a resolved or closed ticket',
+      );
+    }
+
     await this.supportMessageModel.create({
       requestId,
       senderId,
