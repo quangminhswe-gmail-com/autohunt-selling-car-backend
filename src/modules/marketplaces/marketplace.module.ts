@@ -38,6 +38,9 @@ import { AdminReviewsService } from './services/admin-review.service';
 import { AdminReviewsController } from './controllers/admin-review.controller';
 //Review Module
 
+//Ai search service
+import { AiSearchService } from './services/ai-search.service';
+
 //User
 import { User, UserSchema } from '../users/user.schema';
 //==================================================================
@@ -60,6 +63,7 @@ import { User, UserSchema } from '../users/user.schema';
     OrderService,
     ReviewService,
     AdminReviewsService,
+    AiSearchService,
   ],
   controllers: [
     VehicleController,

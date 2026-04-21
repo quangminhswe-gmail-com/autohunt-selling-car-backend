@@ -1,10 +1,15 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
 import { VehicleService } from '../services/vehicle.service';
 import { SearchVehicleDto } from '../dto/search-vehicle.dto';
+import { AiSearchService } from '../services/ai-search.service';
+import { AiSearchDto } from '../dto/ai-search.dto';
 
 @Controller('public/vehicle')
 export class VehiclePublicController {
-  constructor(private readonly vehicleService: VehicleService) {}
+  constructor(
+    private readonly vehicleService: VehicleService,
+    private readonly aiSearchService: AiSearchService,
+  ) {}
 
   @Get()
   getAllVehicles() {
@@ -15,5 +20,10 @@ export class VehiclePublicController {
   @Get('search')
   searchVehicles(@Query() query: SearchVehicleDto) {
     return this.vehicleService.searchVehicles(query);
+  }
+
+  @Post('ai-search')
+  async aiSearch(@Body() dto: AiSearchDto) {
+    return this.aiSearchService.aiSearch(dto.query);
   }
 }
