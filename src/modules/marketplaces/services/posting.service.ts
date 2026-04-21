@@ -197,7 +197,11 @@ Yêu cầu bắt buộc:
 
       return posting;
     } catch (error) {
-      console.error('[CREATE POSTING ERROR]', error?.message);
+      if (error instanceof Error) {
+        console.error('[CREATE POSTING ERROR]', error.message);
+      } else {
+        console.error('[CREATE POSTING ERROR]', error);
+      }
 
       // 🔥 rollback: xóa vehicle nếu có
       if (vehicle?._id) {
