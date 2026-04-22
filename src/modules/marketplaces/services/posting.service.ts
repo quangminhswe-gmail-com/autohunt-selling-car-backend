@@ -182,14 +182,20 @@ Yêu cầu bắt buộc:
 
       const finalSlug = `${slug}-${Date.now()}`;
 
-      // ⚠️ AI có thể fail
-      const aiDescription = await this.generateMarketingContent(vehicle);
+      let aiDescription = '';
+      try {
+        aiDescription = (await this.generateMarketingContent(vehicle)).trim();
+      } catch (aiError) {
+        if (aiError instanceof Error) {
+          console.error('[AI DESCRIPTION ERROR]', aiError.message);
+        } else {
+          console.error('[AI DESCRIPTION ERROR]', aiError);
+        }
+      }
 
       const posting = await this.postingModel.create({
         ...createPostingDto,
-        description: createPostingDto.description?.trim()
-          ? `${createPostingDto.description}\n\n${aiDescription}`
-          : aiDescription,
+        description: aiDescription,
         ownerId: userId,
         slug: finalSlug,
         status: PostingStatus.ACTIVE,
