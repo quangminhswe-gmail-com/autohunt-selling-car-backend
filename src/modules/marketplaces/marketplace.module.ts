@@ -40,6 +40,19 @@ import { AdminReviewsController } from './controllers/admin-review.controller';
 
 //Ai search service
 import { AiSearchService } from './services/ai-search.service';
+// 👇 ADD
+import {
+  BuyerProfile,
+  BuyerProfileSchema,
+} from '../users/buyer-profile.schema';
+import {
+  SellerProfile,
+  SellerProfileSchema,
+} from '../users/seller-profile.schema';
+
+import { AiConsultService } from './services/ai-consult.service';
+import { AiConsultController } from './controllers/ai-consult.controller';
+//Ai search service
 
 //User
 import { User, UserSchema } from '../users/user.schema';
@@ -52,6 +65,8 @@ import { User, UserSchema } from '../users/user.schema';
       { name: Order.name, schema: OrderSchema },
       { name: Review.name, schema: ReviewSchema },
       { name: User.name, schema: UserSchema },
+      { name: BuyerProfile.name, schema: BuyerProfileSchema },
+      { name: SellerProfile.name, schema: SellerProfileSchema },
     ]),
     UploadModule,
   ],
@@ -64,6 +79,7 @@ import { User, UserSchema } from '../users/user.schema';
     ReviewService,
     AdminReviewsService,
     AiSearchService,
+    AiConsultService,
   ],
   controllers: [
     VehicleController,
@@ -75,6 +91,7 @@ import { User, UserSchema } from '../users/user.schema';
     AdminOrderController,
     ReviewController,
     AdminReviewsController,
+    AiConsultController,
   ],
 })
 export class MarketplaceModule {}

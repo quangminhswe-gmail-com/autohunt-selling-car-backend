@@ -9,9 +9,21 @@ import * as bcrypt from 'bcrypt';
 import { User } from '@/modules/users/user.schema';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UserSettingsDto } from './dto/user-setting.dto';
+import { BuyerProfile, BuyerProfileDocument } from './buyer-profile.schema';
+
+import { SellerProfile, SellerProfileDocument } from './seller-profile.schema';
+
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(BuyerProfile.name)
+    private buyerModel: Model<BuyerProfileDocument>,
+
+    @InjectModel(SellerProfile.name)
+    private sellerModel: Model<SellerProfileDocument>,
+  ) {}
 
   async createTestUser() {
     const randomStr = Math.random().toString(36).substring(7);
@@ -125,4 +137,67 @@ export class UsersService {
     return user.save();
   }
   //UC-CTM-ACC01-U ||	CTM-ACC01 ||	Edit Account Information
+
+  //save setting as preferences for seller and buyer
+  async saveSettings(userId: string, dto: UserSettingsDto) {
+    if (!dto.role) {
+      throw new BadRequestException('Role is required');
+    }
+
+    if (dto.role === 'BUYER') {
+      const updated = await this.buyerModel.findOneAndUpdate(
+        { userId },
+        {
+          preferredBrand: dto.preferredBrand,
+          preferredType: dto.preferredType,
+          preferredColor: dto.preferredColor,
+          minYear: dto.minYear,
+          maxPrice: dto.maxPrice,
+          preferredFeatures: dto.preferredFeatures,
+          usagePurpose: dto.usagePurpose,
+        },
+        {
+          upsert: true,
+          new: true,
+        },
+      );
+
+      return {
+        role: 'BUYER',
+        data: updated,
+      };
+    }
+
+    if (dto.role === 'SELLER') {
+      const updated = await this.sellerModel.findOneAndUpdate(
+        { userId },
+        {
+          sellingPriority: dto.sellingPriority,
+          isNegotiable: dto.isNegotiable,
+          preferredBuyerType: dto.preferredBuyerType,
+        },
+        {
+          upsert: true,
+          new: true,
+        },
+      );
+
+      return {
+        role: 'SELLER',
+        data: updated,
+      };
+    }
+
+    throw new BadRequestException('Invalid role');
+  }
+
+  async getSettings(userId: string) {
+    const buyer = await this.buyerModel.findOne({ userId }).lean();
+    const seller = await this.sellerModel.findOne({ userId }).lean();
+
+    return {
+      buyer,
+      seller,
+    };
+  }
 }
