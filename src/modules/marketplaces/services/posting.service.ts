@@ -22,6 +22,7 @@ import { PostingStatus } from '@/common/constants/enum';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { UpdatePostingDto } from '../dto/update-posting.dto';
+import { BuyerSearchService } from '@/modules/users/services/buyer-search.service';
 @Injectable()
 export class PostingService {
   private genAI: GoogleGenerativeAI;
@@ -32,6 +33,7 @@ export class PostingService {
 
     @InjectModel(Vehicle.name)
     private readonly vehicleModel: Model<VehicleDocument>,
+    private readonly buyerSearchService: BuyerSearchService,
   ) {
     const geminiApiKey = process.env.GEMINI_API_KEY;
 
@@ -200,6 +202,10 @@ Yêu cầu bắt buộc:
         slug: finalSlug,
         status: PostingStatus.ACTIVE,
       });
+
+      await this.buyerSearchService.processNewPostingMatches(
+        String(posting._id),
+      );
 
       return posting;
     } catch (error) {
