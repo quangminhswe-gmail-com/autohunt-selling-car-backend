@@ -34,10 +34,14 @@ export class NotificationService {
       .sort({ createdAt: -1 });
   }
 
-  async getForCustomer(role: string) {
+  async getForCustomer(role: string, userId: string) {
     return await this.notificationModel
       .find({
-        $or: [{ targetRole: 'all' }, { targetRole: role }],
+        $or: [
+          { targetRole: 'all' },
+          { targetRole: role, targetUserId: null },
+          { targetUserId: new Types.ObjectId(userId) },
+        ],
       })
       .sort({ createdAt: -1 });
   }

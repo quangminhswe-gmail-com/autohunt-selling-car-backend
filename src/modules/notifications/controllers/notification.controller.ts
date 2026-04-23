@@ -10,6 +10,6 @@ export class NotificationController {
 
   @Get()
   getMyNotifications(@Req() req) {
-    return this.notificationService.getForCustomer(req.user.role);
+    return this.notificationService.getForCustomer(req.user.role, req.user.id);
   }
 }

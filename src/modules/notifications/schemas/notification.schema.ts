@@ -4,6 +4,7 @@ import { HydratedDocument, Types } from 'mongoose';
 export type NotificationDocument = HydratedDocument<Notification>;
 
 export enum NotificationTarget {
+  ALL = 'all',
   CUSTOMER = 'customer',
 }
 
@@ -20,6 +21,9 @@ export class Notification {
     required: true,
   })
   targetRole: NotificationTarget;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  targetUserId?: Types.ObjectId | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;

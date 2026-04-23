@@ -56,6 +56,15 @@ import { AiConsultController } from './controllers/ai-consult.controller';
 
 //User
 import { User, UserSchema } from '../users/user.schema';
+import {
+  BuyerSearch,
+  BuyerSearchSchema,
+} from '../users/schemas/buyer-search.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from '../notifications/schemas/notification.schema';
+import { BuyerSearchService } from '../users/services/buyer-search.service';
 //==================================================================
 @Module({
   imports: [
@@ -67,6 +76,8 @@ import { User, UserSchema } from '../users/user.schema';
       { name: User.name, schema: UserSchema },
       { name: BuyerProfile.name, schema: BuyerProfileSchema },
       { name: SellerProfile.name, schema: SellerProfileSchema },
+      { name: BuyerSearch.name, schema: BuyerSearchSchema },
+      { name: Notification.name, schema: NotificationSchema },
     ]),
     UploadModule,
   ],
@@ -80,6 +91,7 @@ import { User, UserSchema } from '../users/user.schema';
     AdminReviewsService,
     AiSearchService,
     AiConsultService,
+    BuyerSearchService,
   ],
   controllers: [
     VehicleController,
