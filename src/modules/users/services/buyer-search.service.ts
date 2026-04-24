@@ -28,6 +28,8 @@ import {
   NotificationDocument,
   NotificationTarget,
 } from '@/modules/notifications/schemas/notification.schema';
+import { User, UserDocument } from '../user.schema';
+import { PostingStatus } from '@/common/constants/enum';
 
 @Injectable()
 export class BuyerSearchService {
@@ -40,6 +42,8 @@ export class BuyerSearchService {
     private readonly vehicleModel: Model<VehicleDocument>,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   private async sendMatchEmail(params: {
@@ -89,6 +93,62 @@ export class BuyerSearchService {
     });
   }
 
+  private async sendBuyerInterestEmail(params: {
+    to: string;
+    sellerName: string;
+    buyerName: string;
+    buyerEmail: string;
+    buyerPhone?: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleYear: number;
+    postingId: string;
+  }) {
+    const host = process.env.SMTP_HOST;
+    const port = Number(process.env.SMTP_PORT || 587);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const from = process.env.SMTP_FROM || user;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    if (!host || !user || !pass || !from) {
+      return;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    const vehicleTitle = `${params.vehicleYear} ${params.vehicleMake} ${params.vehicleModel}`;
+    const vehicleLink = `${frontendUrl}/vehicle/${params.postingId}`;
+
+    await transporter.sendMail({
+      from,
+      to: params.to,
+      subject: `AutoHunt: A buyer is interested in your ${vehicleTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+          <h2>Hello ${params.sellerName},</h2>
+          <p>A buyer has just submitted a request that matches your listing <strong>${vehicleTitle}</strong>.</p>
+          <p><strong>Buyer info</strong></p>
+          <ul>
+            <li>Name: ${params.buyerName}</li>
+            <li>Email: ${params.buyerEmail}</li>
+            <li>Phone: ${params.buyerPhone || 'Not provided'}</li>
+          </ul>
+          <p>
+            <a href="${vehicleLink}" target="_blank" rel="noopener noreferrer">
+              View your listing
+            </a>
+          </p>
+        </div>
+      `,
+    });
+  }
+
   private normalizeText(value?: string) {
     return (value || '').trim().toLowerCase();
   }
@@ -123,6 +183,34 @@ export class BuyerSearchService {
     const yearOfManufacture = yearMatch ? Number(yearMatch[0]) : undefined;
 
     return { make, model, yearOfManufacture };
+  }
+
+  private matchesSearchCriteria(params: {
+    searchMake?: string;
+    searchModel?: string;
+    searchYear?: number;
+    searchQuery: string;
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleYear: number;
+  }) {
+    const byMake =
+      !params.searchMake ||
+      this.normalizeText(params.searchMake) ===
+        this.normalizeText(params.vehicleMake);
+    const byModel =
+      !params.searchModel ||
+      this.normalizeText(params.vehicleModel).includes(
+        this.normalizeText(params.searchModel),
+      );
+    const byYear =
+      !params.searchYear ||
+      Number(params.searchYear) === Number(params.vehicleYear);
+    const byQuery = this
+      .normalizeText(params.searchQuery)
+      .includes(this.normalizeText(params.vehicleMake));
+
+    return (byMake || byQuery) && byModel && byYear;
   }
 
   private toDto(doc: any): BuyerSearchResponseDto {
@@ -164,6 +252,8 @@ export class BuyerSearchService {
       emailOptIn: Boolean(dto.emailOptIn && dto.notifyEmail),
       active: true,
     });
+
+    await this.processNewBuyerSearchMatches(String(search._id));
 
     return this.toDto(search);
   }
@@ -223,18 +313,17 @@ export class BuyerSearchService {
     });
 
     for (const search of activeSearches) {
-      const byMake = !search.make || this.normalizeText(search.make) === make;
-      const byModel =
-        !search.model || model.includes(this.normalizeText(search.model));
-      const byYear =
-        !search.yearOfManufacture ||
-        Number(search.yearOfManufacture) === Number(year);
-      const byQuery = this.normalizeText(search.query).includes(make);
+      const isMatched = this.matchesSearchCriteria({
+        searchMake: search.make,
+        searchModel: search.model,
+        searchYear: search.yearOfManufacture,
+        searchQuery: search.query,
+        vehicleMake: make,
+        vehicleModel: model,
+        vehicleYear: year,
+      });
 
-      if (!byMake && !byQuery) {
-        continue;
-      }
-      if (!byModel || !byYear) {
+      if (!isMatched) {
         continue;
       }
 
@@ -267,6 +356,106 @@ export class BuyerSearchService {
           // Keep matching flow robust even if email provider fails.
         }
       }
+    }
+  }
+
+  async processNewBuyerSearchMatches(searchId: string) {
+    const search = await this.buyerSearchModel.findById(searchId);
+    if (!search || !search.active) {
+      return;
+    }
+
+    const buyer = await this.userModel.findById(search.buyerId).lean();
+    if (!buyer) {
+      return;
+    }
+
+    const postings = await this.postingModel
+      .find({ status: PostingStatus.ACTIVE })
+      .populate('vehicleId')
+      .populate('ownerId');
+
+    let firstMatchedPostingId: Types.ObjectId | null = null;
+    const notifiedSellerIds = new Set<string>();
+
+    for (const posting of postings) {
+      const vehicle = posting.vehicleId as any;
+      const owner = posting.ownerId as any;
+
+      if (!vehicle || !owner) {
+        continue;
+      }
+
+      const ownerId = String(owner._id);
+      if (ownerId === String(search.buyerId)) {
+        continue;
+      }
+
+      const isMatched = this.matchesSearchCriteria({
+        searchMake: search.make,
+        searchModel: search.model,
+        searchYear: search.yearOfManufacture,
+        searchQuery: search.query,
+        vehicleMake: vehicle.make,
+        vehicleModel: vehicle.model,
+        vehicleYear: vehicle.yearOfManufacture,
+      });
+
+      if (!isMatched) {
+        continue;
+      }
+
+      if (!firstMatchedPostingId) {
+        firstMatchedPostingId = posting._id as Types.ObjectId;
+      }
+
+      if (notifiedSellerIds.has(ownerId)) {
+        continue;
+      }
+      notifiedSellerIds.add(ownerId);
+
+      const buyerName = `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim();
+      const buyerPhone = buyer.phoneNumber?.trim() || '';
+
+      const messageParts = [
+        `${buyerName || 'A buyer'} is interested in your ${vehicle.yearOfManufacture} ${vehicle.make} ${vehicle.model}.`,
+        `Email: ${buyer.email}`,
+      ];
+      if (buyerPhone) {
+        messageParts.push(`Phone: ${buyerPhone}`);
+      }
+
+      await this.notificationModel.create({
+        title: 'A buyer matched your listing',
+        message: messageParts.join(' '),
+        targetRole: NotificationTarget.CUSTOMER,
+        targetUserId: owner._id,
+        createdBy: search.buyerId,
+        isSent: true,
+      });
+
+      try {
+        await this.sendBuyerInterestEmail({
+          to: owner.email,
+          sellerName: `${owner.firstName || ''} ${owner.lastName || ''}`.trim() || 'Seller',
+          buyerName: buyerName || 'AutoHunt buyer',
+          buyerEmail: buyer.email,
+          buyerPhone,
+          vehicleMake: vehicle.make,
+          vehicleModel: vehicle.model,
+          vehicleYear: vehicle.yearOfManufacture,
+          postingId: String(posting._id),
+        });
+      } catch {
+        // Do not fail matching if email sending fails.
+      }
+    }
+
+    if (firstMatchedPostingId) {
+      search.matchedPostingId = firstMatchedPostingId;
+      search.matchedAt = new Date();
+      search.active = false;
+      await search.save();
     }
   }
 }
