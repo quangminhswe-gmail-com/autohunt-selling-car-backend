@@ -105,5 +105,6 @@ import { BuyerSearchService } from '../users/services/buyer-search.service';
     AdminReviewsController,
     AiConsultController,
   ],
+  exports: [VehicleService],
 })
 export class MarketplaceModule {}
