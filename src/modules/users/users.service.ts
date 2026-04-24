@@ -100,8 +100,24 @@ export class UsersService {
 
   //UC-CTM-ACC01-U ||	CTM-ACC01 ||	Edit Account Information
   async updateProfile(userId: string, dto: UpdateUserDto) {
+    const payload = { ...dto } as Record<string, any>;
+
+    if (typeof payload.email === 'string') {
+      payload.email = payload.email.trim().toLowerCase();
+      const existingUser = await this.userModel
+        .findOne({
+          email: payload.email,
+          _id: { $ne: userId },
+        })
+        .lean();
+
+      if (existingUser) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
+
     const updatedUser = await this.userModel
-      .findByIdAndUpdate(userId, dto, { new: true })
+      .findByIdAndUpdate(userId, payload, { new: true })
       .select('-password');
 
     if (!updatedUser) {
