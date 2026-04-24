@@ -9,6 +9,7 @@ import { UploadModule } from './modules/upload/upload.module';
 import { SupportModule } from './modules/support/support.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -71,6 +72,7 @@ import { ChatModule } from './modules/chat/chat.module';
     SupportModule,
     NotificationModule,
     ChatModule,
+    AiAssistantModule,
   ],
 })
 export class AppModule {}
