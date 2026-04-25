@@ -101,8 +101,8 @@ export class SessionService {
 
       let multiplier = 1;
 
-      if (lower.includes('tỷ')) multiplier = 1_000_000_000;
-      else if (lower.includes('triệu')) multiplier = 1_000_000;
+      if (lower.includes('tỷ') || lower.includes('ty')) multiplier = 1_000_000_000;
+      else if (lower.includes('triệu') || lower.includes('trieu')) multiplier = 1_000_000;
 
       const cleaned = lower.replace(/[^\d]/g, '');
       const n = Number(cleaned);

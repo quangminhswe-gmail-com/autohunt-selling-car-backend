@@ -81,9 +81,14 @@ export class VehicleTool {
   async searchByKeyword(keyword: string) {
     const regex = this.buildSearchRegex(keyword);
 
-    return this.postingModel.find({
-      status: 'active',
-      $or: [{ title: regex }, { description: regex }],
-    });
+    return this.postingModel
+      .find({
+        status: 'active',
+        $or: [{ title: regex }, { description: regex }],
+      })
+      .populate('vehicleId')
+      .sort({ createdAt: -1 })
+      .limit(12)
+      .lean();
   }
 }

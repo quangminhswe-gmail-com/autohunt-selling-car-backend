@@ -233,7 +233,7 @@ FALLBACK: ${fallbackReply}
         ? dbVehicleNames.length > 0
           ? `Xe phu hop hien co trong database: ${dbVehicleNames.join(', ')}.`
           : 'Mình đã chọn một số xe phù hợp trong database ở bên dưới.'
-        : 'Hien chua co mau xe phu hop ro rang trong database, ban thu dieu chinh them ngan sach hoac loai xe.';
+        : 'Xin lỗi, hiện tại website chưa có xe phù hợp rõ ràng theo nhu cầu của bạn. Bạn có thể vào mục AI Finder Alerts để điền tiêu chí và nhận thông báo ngay khi có xe phù hợp được đăng.';
       const finalReply = `${advisory} ${dbSuggestion}`.trim();
       this.cache.set(cacheKey, finalReply);
       return finalReply;
@@ -252,14 +252,14 @@ FALLBACK: ${fallbackReply}
     let budget: number | null = null;
 
     // const match = text.match(/(\d+)\s*(triệu|tỷ)/);
-    const match = text.match(/(\d+(?:\.\d+)?)\s*(tỷ|triệu)/);
+    const match = text.match(/(\d+(?:\.\d+)?)\s*(tỷ|ty|triệu|trieu)/);
 
     if (match) {
       const value = Number(match[1]);
       const unit = match[2];
 
-      if (unit === 'tỷ') budget = value * 1_000_000_000;
-      if (unit === 'triệu') budget = value * 1_000_000;
+      if (unit === 'tỷ' || unit === 'ty') budget = value * 1_000_000_000;
+      if (unit === 'triệu' || unit === 'trieu') budget = value * 1_000_000;
     }
 
     let carType: string | null = null;
