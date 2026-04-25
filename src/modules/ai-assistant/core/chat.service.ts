@@ -228,10 +228,12 @@ FALLBACK: ${fallbackReply}
         maxTokens: 90,
       });
       const advisory = (text || '').trim() || fallbackReply;
-      const dbSuggestion =
-        dbVehicleNames.length > 0
+      const hasDbResults = Array.isArray(recommendedVehicles) && recommendedVehicles.length > 0;
+      const dbSuggestion = hasDbResults
+        ? dbVehicleNames.length > 0
           ? `Xe phu hop hien co trong database: ${dbVehicleNames.join(', ')}.`
-          : 'Hien chua co mau xe phu hop ro rang trong database, ban thu dieu chinh them ngan sach hoac loai xe.';
+          : 'Mình đã chọn một số xe phù hợp trong database ở bên dưới.'
+        : 'Hien chua co mau xe phu hop ro rang trong database, ban thu dieu chinh them ngan sach hoac loai xe.';
       const finalReply = `${advisory} ${dbSuggestion}`.trim();
       this.cache.set(cacheKey, finalReply);
       return finalReply;
@@ -306,18 +308,18 @@ FALLBACK: ${fallbackReply}
     }
 
     if (budget <= 500_000_000) {
-      return 'Tầm 500 triệu bạn có thể tham khảo: \n - Kia Morning  \n - Hyundai i10   \n- Toyota Wigo \n Bạn có thể: \n- Gõ tên xe để mình phân tích chi tiết   \n - Hoặc nói dòng xe bạn thích (ví dụ: Mazda, Toyota...) để mình tìm giúp';
+      return 'Tầm giá này mình sẽ ưu tiên xe gọn, tiết kiệm và dễ bảo dưỡng. Mình đã chọn một số xe đang có trên web phù hợp với nhu cầu của bạn ở bên dưới.';
     }
 
     if (budget <= 800_000_000) {
-      return 'Bạn có thể cân nhắc Toyota Vios, Hyundai Accent hoặc Mazda 3 🚗';
+      return 'Trong tầm giá này có nhiều lựa chọn sedan/crossover rất hợp đi hằng ngày. Hiện tại web đang có những xe dưới đây phù hợp với nhu cầu của bạn.';
     }
 
     if (budget <= 1_500_000_000) {
-      return 'Phù hợp với SUV như Mazda CX-5, Hyundai Tucson 👍';
+      return 'Với ngân sách này bạn có thể nhắm nhóm SUV/crossover rộng rãi, an toàn và đi đường dài ổn. Hiện tại web đang có những xe dưới đây phù hợp với nhu cầu của bạn.';
     }
 
-    return 'Bạn có thể xem các dòng cao cấp như Ford Everest hoặc Toyota Fortuner 🚙';
+    return 'Với ngân sách này bạn có thể xem các lựa chọn SUV/cao cấp hơn, ưu tiên an toàn và tiện nghi. Hiện tại web đang có những xe dưới đây phù hợp với nhu cầu của bạn.';
   }
 
   // private askNextQuestion(session: any): string | null {

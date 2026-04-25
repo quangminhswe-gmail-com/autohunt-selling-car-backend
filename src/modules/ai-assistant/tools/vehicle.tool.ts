@@ -15,31 +15,62 @@ export class VehicleTool {
   ) {}
 
   async search(intent: any) {
-    const vehicleFilter: any = {};
+    const budget = Number(intent?.budget || 0);
+    const hasBudget = Number.isFinite(budget) && budget > 0;
 
-    if (intent.budget) {
-      vehicleFilter.price = { $lte: intent.budget * 1.05 };
+    // Default: ±20% quanh ngân sách (có thể tinh chỉnh sau)
+    const minPrice = hasBudget ? Math.round(budget * 0.8) : undefined;
+    const maxPrice = hasBudget ? Math.round(budget * 1.2) : undefined;
+
+    const postingFilter: any = { status: 'active' };
+    if (hasBudget) {
+      postingFilter.price = { $gte: minPrice, $lte: maxPrice };
     }
 
-    if (intent.carType) {
-      vehicleFilter.type = { $regex: intent.carType, $options: 'i' };
-    }
+    // Lọc loại xe dựa trên Vehicle.type (populate + match).
+    const vehicleMatch = intent?.carType
+      ? { type: { $regex: String(intent.carType).trim(), $options: 'i' } }
+      : undefined;
 
-    const vehicles = await this.vehicleModel.find(vehicleFilter).limit(30).lean();
-    if (!vehicles.length) return [];
-
-    const vehicleIds = vehicles.map((v: any) => v._id);
-    const postings = await this.postingModel
-      .find({
-        status: 'active',
-        vehicleId: { $in: vehicleIds },
+    let postings = await this.postingModel
+      .find(postingFilter)
+      .populate({
+        path: 'vehicleId',
+        match: vehicleMatch,
       })
-      .populate('vehicleId')
       .sort({ createdAt: -1 })
-      .limit(8)
+      .limit(40)
       .lean();
 
-    return postings;
+    // Do populate match: posting nào không khớp sẽ có vehicleId=null → loại bỏ
+    postings = postings.filter((p: any) => Boolean(p.vehicleId));
+
+    // Nếu quá hẹp không ra kết quả, nới dần (±35%) để vẫn có option “gần phù hợp”
+    if (!postings.length && hasBudget) {
+      const relaxed = await this.postingModel
+        .find({
+          status: 'active',
+          price: { $gte: Math.round(budget * 0.65), $lte: Math.round(budget * 1.35) },
+        })
+        .populate({
+          path: 'vehicleId',
+          match: vehicleMatch,
+        })
+        .sort({ createdAt: -1 })
+        .limit(60)
+        .lean();
+
+      postings = relaxed.filter((p: any) => Boolean(p.vehicleId));
+    }
+
+    // Ranking: ưu tiên gần ngân sách nhất
+    if (hasBudget) {
+      postings.sort(
+        (a: any, b: any) => Math.abs(Number(a.price || 0) - budget) - Math.abs(Number(b.price || 0) - budget),
+      );
+    }
+
+    return postings.slice(0, 8);
   }
 
   private buildSearchRegex(keyword: string) {
