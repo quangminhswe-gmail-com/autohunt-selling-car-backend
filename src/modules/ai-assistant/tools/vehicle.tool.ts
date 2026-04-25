@@ -15,17 +15,31 @@ export class VehicleTool {
   ) {}
 
   async search(intent: any) {
-    const filter: any = {};
+    const vehicleFilter: any = {};
 
     if (intent.budget) {
-      filter.price = { $lte: intent.budget };
+      vehicleFilter.price = { $lte: intent.budget * 1.05 };
     }
 
     if (intent.carType) {
-      filter.type = intent.carType;
+      vehicleFilter.type = { $regex: intent.carType, $options: 'i' };
     }
 
-    return this.vehicleModel.find(filter).limit(5);
+    const vehicles = await this.vehicleModel.find(vehicleFilter).limit(30).lean();
+    if (!vehicles.length) return [];
+
+    const vehicleIds = vehicles.map((v: any) => v._id);
+    const postings = await this.postingModel
+      .find({
+        status: 'active',
+        vehicleId: { $in: vehicleIds },
+      })
+      .populate('vehicleId')
+      .sort({ createdAt: -1 })
+      .limit(8)
+      .lean();
+
+    return postings;
   }
 
   private buildSearchRegex(keyword: string) {

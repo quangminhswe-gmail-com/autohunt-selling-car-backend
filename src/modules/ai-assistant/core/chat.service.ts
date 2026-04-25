@@ -77,11 +77,12 @@ export class ChatService {
     }
 
     // =========================
-    // 2. SIMPLE RULE (NO AI)
+    // 2. SIMPLE RULE
     // =========================
     const quick = this.handleSimple(message, session);
     if (quick) {
-      return { reply: quick, intent: session };
+      const recommendedVehicles = await this.vehicleTool.search(session);
+      return { reply: quick, intent: session, recommendedVehicles };
     }
 
     // =========================
@@ -96,6 +97,8 @@ export class ChatService {
       passengers: localIntent.passengers ?? undefined,
       purpose: localIntent.purpose ?? undefined,
     });
+    const recommendedVehicles = await this.vehicleTool.search(session);
+
     // =========================
     // 4. 🔥 USER NHẬP TÊN XE → QUERY DB
     // =========================
@@ -119,66 +122,34 @@ export class ChatService {
       return {
         reply: this.buildCarDetailReply(car),
         intent: session,
+        recommendedVehicles: cars.slice(0, 8),
       };
     }
 
-    // =========================
-    // 4. RULE-BASED RESPONSE (NO AI)
-    // =========================
-    // if (localIntent.budget || session.budget) {
-    //   const reply = this.buildRuleReply(session);
-
-    //   return {
-    //     reply,
-    //     intent: session,
-    //   };
-    // }
-    // nếu còn thiếu info → hỏi tiếp
+    // nếu còn thiếu info → hỏi tiếp (Gemini diễn đạt)
     const nextQuestion = this.askDynamicQuestion(session);
 
     if (nextQuestion) {
       return {
         reply: nextQuestion,
         intent: session,
+        recommendedVehicles,
       };
     }
 
-    // đủ info → mới recommend
-    const reply = this.buildRuleReply(session);
+    // đủ info → Gemini tư vấn + DB recommendations
+    const ruleFallback = this.buildRuleReply(session);
+    const reply = await this.generateGeminiReply({
+      message,
+      session,
+      recommendedVehicles,
+      fallbackReply: ruleFallback,
+    });
 
     return {
       reply,
       intent: session,
-    };
-
-    // =========================
-    // 5. CACHE (TRƯỚC KHI GỌI AI)
-    // =========================
-    const cacheKey = message.toLowerCase();
-    if (this.cache.has(cacheKey)) {
-      return {
-        reply: this.cache.get(cacheKey),
-        intent: session,
-      };
-    }
-
-    // =========================
-    // 6. FALLBACK → AI (ÍT KHI DÙNG)
-    // =========================
-    const aiResult = await this.callAIWithRetry(message, session);
-
-    session = this.sessionService.update(userId, {
-      budget: aiResult.budget,
-      carType: aiResult.carType,
-      passengers: aiResult.passengers,
-      purpose: aiResult.purpose,
-    });
-
-    this.cache.set(cacheKey, aiResult.reply);
-
-    return {
-      reply: aiResult.reply,
-      intent: session,
+      recommendedVehicles,
     };
   }
 
@@ -199,103 +170,77 @@ export class ChatService {
     return null;
   }
 
-  // =========================
-  // AI CALL WITH RETRY
-  // =========================
-  private async callAIWithRetry(message: string, session: any, retry = 1) {
-    try {
-      const prompt = this.buildPrompt(message, session);
+  private async generateGeminiReply({
+    message,
+    session,
+    recommendedVehicles,
+    fallbackReply,
+  }: {
+    message: string;
+    session: any;
+    recommendedVehicles: any[];
+    fallbackReply: string;
+  }): Promise<string> {
+    const cacheKey = `${message}|${session?.budget}|${session?.carType}|${session?.purpose}|${session?.passengers}`;
+    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
-      const res = await this.gemini.generate({
-        prompt,
-        model: 'gemini-2.5-flash',
-        maxTokens: 200,
-      });
+    const topVehicles = recommendedVehicles.slice(0, 3);
+    const dbVehicleNames = topVehicles
+      .map((item: any) => {
+        const vehicle = item?.vehicleId || item?.vehicle || {};
+        const title =
+          item?.title?.trim() ||
+          `${vehicle?.make || ''} ${vehicle?.model || ''}`.trim();
+        return title || null;
+      })
+      .filter(Boolean) as string[];
 
-      return this.parseAI(res);
-    } catch (err: any) {
-      const delay = this.extractRetryDelay(err) || 2000;
+    const shortlist = topVehicles
+      .slice(0, 2)
+      .map((item: any) => {
+        const vehicle = item?.vehicleId || item?.vehicle || {};
+        const title =
+          item?.title ||
+          `${vehicle?.make || ''} ${vehicle?.model || ''}`.trim() ||
+          'Mau xe khac';
+        return `${title};${Number(item?.price || vehicle?.price || 0)};${vehicle?.type || 'N/A'}`;
+      })
+      .join('\n');
 
-      if (retry > 0) {
-        await new Promise((r) => setTimeout(r, delay));
-        return this.callAIWithRetry(message, session, retry - 1);
-      }
+    const prompt = `
+Ban la AI tu van xe.
+Tra loi tieng Viet, toi da 2 cau, ngan gon, tu nhien.
+TUYET DOI KHONG tu dat ten xe.
+KHONG nhac bat ky ten xe nao trong cau tra loi.
+Khong markdown, khong JSON.
 
-      // fallback nếu fail
-      return {
-        budget: null,
-        carType: null,
-        passengers: null,
-        purpose: null,
-        reply: 'Hiện tại hệ thống AI đang bận, bạn thử lại sau nhé 🙏',
-      };
-    }
-  }
-
-  // =========================
-  // BUILD PROMPT (GỘP INTENT + REPLY)
-  // =========================
-  private buildPrompt(message: string, session: any): string {
-    return `
-You are a car sales assistant.
-
-User profile:
-- Budget: ${session.budget || 'unknown'}
-- Car type: ${session.carType || 'unknown'}
-- Passengers: ${session.passengers || 'unknown'}
-- Purpose: ${session.purpose || 'unknown'}
-
-Task:
-1. Extract missing fields
-2. Recommend a suitable car
-3. Keep answer short (2-3 sentences)
-
-Return ONLY JSON:
-{
-  "budget": number | null,
-  "carType": string | null,
-  "passengers": number | null,
-  "purpose": string | null,
-  "reply": string
-}
-
-User: "${message}"
+CTX: b=${session?.budget || 'na'}; t=${session?.carType || 'na'}; s=${session?.passengers || 'na'}; p=${session?.purpose || 'na'}
+DB:
+${shortlist || 'na'}
+USER: ${message}
+FALLBACK: ${fallbackReply}
 `;
-  }
 
-  // =========================
-  // PARSE AI RESPONSE
-  // =========================
-  private parseAI(text: string) {
     try {
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      const clean = text.slice(start, end + 1);
-
-      return JSON.parse(clean);
+      const text = await this.gemini.generate({
+        prompt,
+        model: 'gemini-2.5-flash-lite',
+        maxTokens: 90,
+      });
+      const advisory = (text || '').trim() || fallbackReply;
+      const dbSuggestion =
+        dbVehicleNames.length > 0
+          ? `Xe phu hop hien co trong database: ${dbVehicleNames.join(', ')}.`
+          : 'Hien chua co mau xe phu hop ro rang trong database, ban thu dieu chinh them ngan sach hoac loai xe.';
+      const finalReply = `${advisory} ${dbSuggestion}`.trim();
+      this.cache.set(cacheKey, finalReply);
+      return finalReply;
     } catch {
-      return {
-        budget: null,
-        carType: null,
-        passengers: null,
-        purpose: null,
-        reply: text,
-      };
+      if (dbVehicleNames.length > 0) {
+        return `${fallbackReply} Xe phu hop hien co trong database: ${dbVehicleNames.join(', ')}.`;
+      }
+      return fallbackReply;
     }
-  }
-
-  // =========================
-  // EXTRACT RETRY DELAY
-  // =========================
-  private extractRetryDelay(err: any): number | null {
-    const msg = err?.message || '';
-    const match = msg.match(/retry in (\d+(\.\d+)?)s/i);
-
-    if (match) {
-      return Number(match[1]) * 1000;
-    }
-
-    return null;
   }
 
   private extractIntentLocal(message: string) {
@@ -319,23 +264,28 @@ User: "${message}"
 
     if (text.includes('suv')) carType = 'SUV';
     if (text.includes('sedan')) carType = 'Sedan';
-    if (text.includes('7 chỗ')) carType = 'SUV';
-    if (text.includes('4 chỗ')) carType = 'Sedan';
-    if (text.includes('5 chỗ')) carType = 'Sedan';
+    if (text.includes('7 chỗ') || text.includes('7 cho')) carType = 'SUV';
+    if (text.includes('4 chỗ') || text.includes('4 cho')) carType = 'Sedan';
+    if (text.includes('5 chỗ') || text.includes('5 cho')) carType = 'Sedan';
 
     let purpose: string | undefined;
 
-    if (text.includes('gia đình')) purpose = 'family';
-    if (text.includes('đi làm') || text.includes('cá nhân'))
+    if (text.includes('gia đình') || text.includes('gia dinh')) purpose = 'family';
+    if (
+      text.includes('đi làm') ||
+      text.includes('di lam') ||
+      text.includes('cá nhân') ||
+      text.includes('ca nhan')
+    )
       purpose = 'personal';
-    if (text.includes('dịch vụ')) purpose = 'business';
+    if (text.includes('dịch vụ') || text.includes('dich vu')) purpose = 'business';
 
     // =========================
     // PASSENGERS
     // =========================
     let passengers: number | undefined;
 
-    const peopleMatch = text.match(/(\d+)\s*(người|chỗ)/);
+    const peopleMatch = text.match(/(\d+)\s*(người|nguoi|chỗ|cho)/);
     if (peopleMatch) {
       passengers = Number(peopleMatch[1]);
     }
