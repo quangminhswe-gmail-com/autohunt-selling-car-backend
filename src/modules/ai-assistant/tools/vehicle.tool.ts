@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Vehicle } from '@/modules/marketplaces/schemas/vehicle.schema';
 import { Posting } from '@/modules/marketplaces/schemas/posting.schema';
+
 @Injectable()
 export class VehicleTool {
   constructor(
@@ -19,18 +20,38 @@ export class VehicleTool {
     const hasBudget = Number.isFinite(budget) && budget > 0;
 
     // Default: ±20% quanh ngân sách (có thể tinh chỉnh sau)
-    const minPrice = hasBudget ? Math.round(budget * 0.8) : undefined;
-    const maxPrice = hasBudget ? Math.round(budget * 1.2) : undefined;
+    const minPrice = hasBudget ? Math.round(budget * 0.7) : undefined;
+
+    const maxPrice = hasBudget
+      ? Math.min(Math.round(budget * 1.1), budget + 500_000_000)
+      : undefined;
 
     const postingFilter: any = { status: 'active' };
+
     if (hasBudget) {
       postingFilter.price = { $gte: minPrice, $lte: maxPrice };
     }
 
-    // Lọc loại xe dựa trên Vehicle.type (populate + match).
-    const vehicleMatch = intent?.carType
-      ? { type: { $regex: String(intent.carType).trim(), $options: 'i' } }
-      : undefined;
+    // =========================
+    // 🎯 CAR TYPE (FIX CỨNG)
+    // =========================
+    let vehicleMatch: any = {};
+
+    if (intent?.mappedType && Array.isArray(intent.mappedType)) {
+      vehicleMatch.type = { $in: intent.mappedType };
+    } else if (intent?.carType) {
+      vehicleMatch.type = {
+        $regex: String(intent.carType).trim(),
+        $options: 'i',
+      };
+    }
+
+    // =========================
+    // 🎯 PASSENGERS (MỚI)
+    // =========================
+    if (intent?.passengers) {
+      vehicleMatch.seats = { $gte: intent.passengers };
+    }
 
     let postings = await this.postingModel
       .find(postingFilter)
@@ -50,7 +71,10 @@ export class VehicleTool {
       const relaxed = await this.postingModel
         .find({
           status: 'active',
-          price: { $gte: Math.round(budget * 0.65), $lte: Math.round(budget * 1.35) },
+          price: {
+            $gte: Math.round(budget * 0.6),
+            $lte: budget + 500_000_000, // 🔥 khóa trần
+          },
         })
         .populate({
           path: 'vehicleId',
@@ -63,14 +87,62 @@ export class VehicleTool {
       postings = relaxed.filter((p: any) => Boolean(p.vehicleId));
     }
 
-    // Ranking: ưu tiên gần ngân sách nhất
+    // =========================
+    // 🎯 SMART RANKING (UPGRADE)
+    // =========================
     if (hasBudget) {
-      postings.sort(
-        (a: any, b: any) => Math.abs(Number(a.price || 0) - budget) - Math.abs(Number(b.price || 0) - budget),
-      );
+      postings = postings
+        .map((p: any) => ({
+          ...p,
+          score: this.calculateScore(p, intent),
+        }))
+        .sort((a: any, b: any) => b.score - a.score);
     }
 
-    return postings.slice(0, 8);
+    // 🔥 đảm bảo không vượt quá +500tr
+if (hasBudget) {
+  postings = postings.filter(
+    (p: any) => Number(p.price || 0) <= budget + 500_000_000,
+  );
+}
+
+return postings.slice(0, 8);
+  }
+
+  // =========================
+  // 🎯 SCORING (MỚI)
+  // =========================
+  private calculateScore(posting: any, intent: any): number {
+    let score = 0;
+
+    const price = Number(posting.price || 0);
+    const budget = Number(intent?.budget || 0);
+
+    // 🎯 PRICE MATCH
+    if (budget && price) {
+      const diff = Math.abs(price - budget);
+      score += 100 - diff / 1_000_000;
+    }
+
+    const vehicle = posting.vehicleId || {};
+
+    // 🎯 TYPE MATCH
+    if (intent?.carType && vehicle?.type) {
+      if (
+        vehicle.type.toLowerCase().includes(intent.carType.toLowerCase())
+      ) {
+        score += 50;
+      }
+    }
+
+    // 🎯 SEATS MATCH
+    if (intent?.passengers && vehicle?.seats) {
+      if (vehicle.seats >= intent.passengers) {
+        score += 30;
+      }
+    }
+
+    return score;
   }
 
   private buildSearchRegex(keyword: string) {
