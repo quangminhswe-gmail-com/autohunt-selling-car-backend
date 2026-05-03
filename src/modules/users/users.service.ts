@@ -216,4 +216,8 @@ export class UsersService {
       seller,
     };
   }
+
+  async findByEmail(email: string) {
+    return this.userModel.findOne({ email: email.toLowerCase() });
+  }
 }
