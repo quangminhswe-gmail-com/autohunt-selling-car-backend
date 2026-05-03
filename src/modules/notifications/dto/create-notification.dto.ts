@@ -1,5 +1,5 @@
-import { IsString, IsEnum, IsEmail } from 'class-validator';
-import { IsOptional } from 'class-validator';
+import { IsString, IsEnum } from 'class-validator';
+import { IsMongoId, IsOptional } from 'class-validator';
 
 import { NotificationTarget } from '../schemas/notification.schema';
 
@@ -14,6 +14,6 @@ export class CreateNotificationDto {
   targetRole: NotificationTarget;
 
   @IsOptional()
-  @IsEmail()
-  targetEmail?: string;
+  @IsMongoId()
+  targetUserId?: string;
 }
