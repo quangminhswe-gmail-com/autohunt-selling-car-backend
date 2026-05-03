@@ -10,6 +10,7 @@ import { SupportModule } from './modules/support/support.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
+import { VoiceVehicleFilterModule } from './modules/voice-vehicle-filter/voice-vehicle-filter.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -73,6 +74,7 @@ import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
     NotificationModule,
     ChatModule,
     AiAssistantModule,
+    VoiceVehicleFilterModule,
   ],
 })
 export class AppModule {}

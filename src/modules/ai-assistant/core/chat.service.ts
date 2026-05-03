@@ -77,11 +77,14 @@ export class ChatService {
     }
 
     // =========================
-    // 2. SIMPLE RULE (NO AI)
+    // 2. SIMPLE RULE
     // =========================
     const quick = this.handleSimple(message, session);
     if (quick) {
-      return { reply: quick, intent: session };
+      const recommendedVehicles = await this.vehicleTool.search(
+        this.buildSearchSession(session),
+      );
+      return { reply: quick, intent: session, recommendedVehicles };
     }
 
     // =========================
@@ -96,6 +99,12 @@ export class ChatService {
       passengers: localIntent.passengers ?? undefined,
       purpose: localIntent.purpose ?? undefined,
     });
+
+    // 🔥 DÙNG SESSION ĐÃ CHUẨN HÓA ĐỂ SEARCH
+    const recommendedVehicles = await this.vehicleTool.search(
+      this.buildSearchSession(session),
+    );
+
     // =========================
     // 4. 🔥 USER NHẬP TÊN XE → QUERY DB
     // =========================
@@ -119,66 +128,66 @@ export class ChatService {
       return {
         reply: this.buildCarDetailReply(car),
         intent: session,
+        recommendedVehicles: cars.slice(0, 8),
       };
     }
 
-    // =========================
-    // 4. RULE-BASED RESPONSE (NO AI)
-    // =========================
-    // if (localIntent.budget || session.budget) {
-    //   const reply = this.buildRuleReply(session);
-
-    //   return {
-    //     reply,
-    //     intent: session,
-    //   };
-    // }
-    // nếu còn thiếu info → hỏi tiếp
+    // nếu còn thiếu info → hỏi tiếp (Gemini diễn đạt)
     const nextQuestion = this.askDynamicQuestion(session);
 
     if (nextQuestion) {
       return {
         reply: nextQuestion,
         intent: session,
+        recommendedVehicles,
       };
     }
 
-    // đủ info → mới recommend
-    const reply = this.buildRuleReply(session);
+    // đủ info → Gemini tư vấn + DB recommendations
+    const ruleFallback = this.buildRuleReply(session);
+    const reply = await this.generateGeminiReply({
+      message,
+      session,
+      recommendedVehicles,
+      fallbackReply: ruleFallback,
+    });
 
     return {
       reply,
       intent: session,
+      recommendedVehicles,
     };
+  }
 
-    // =========================
-    // 5. CACHE (TRƯỚC KHI GỌI AI)
-    // =========================
-    const cacheKey = message.toLowerCase();
-    if (this.cache.has(cacheKey)) {
-      return {
-        reply: this.cache.get(cacheKey),
-        intent: session,
-      };
+  // =========================
+  // 🔥 BUILD SEARCH SESSION (MỚI)
+  // =========================
+  private buildSearchSession(session: any) {
+    let mappedType = session.carType;
+
+    // 🎯 MAP TYPE LINH HOẠT
+    if (session.carType === 'SUV') {
+      mappedType = ['SUV', 'Crossover', 'MPV'];
     }
 
-    // =========================
-    // 6. FALLBACK → AI (ÍT KHI DÙNG)
-    // =========================
-    const aiResult = await this.callAIWithRetry(message, session);
+    if (session.carType === 'Sedan') {
+      mappedType = ['Sedan', 'Hatchback'];
+    }
 
-    session = this.sessionService.update(userId, {
-      budget: aiResult.budget,
-      carType: aiResult.carType,
-      passengers: aiResult.passengers,
-      purpose: aiResult.purpose,
-    });
+    // 🎯 PRICE RANGE THÔNG MINH
+    let minPrice;
+    let maxPrice;
 
-    this.cache.set(cacheKey, aiResult.reply);
+    if (session.budget) {
+      minPrice = session.budget * 0.8;
+      maxPrice = session.budget * 1.1;
+    }
 
     return {
-      reply: aiResult.reply,
-      intent: session,
+      ...session,
+      minPrice,
+      maxPrice,
+      mappedType,
     };
   }
 
@@ -199,143 +208,133 @@ export class ChatService {
     return null;
   }
 
-  // =========================
-  // AI CALL WITH RETRY
-  // =========================
-  private async callAIWithRetry(message: string, session: any, retry = 1) {
-    try {
-      const prompt = this.buildPrompt(message, session);
+  private async generateGeminiReply({
+    message,
+    session,
+    recommendedVehicles,
+    fallbackReply,
+  }: {
+    message: string;
+    session: any;
+    recommendedVehicles: any[];
+    fallbackReply: string;
+  }): Promise<string> {
+    const cacheKey = `${message}|${session?.budget}|${session?.carType}|${session?.purpose}|${session?.passengers}`;
+    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
-      const res = await this.gemini.generate({
+    const topVehicles = recommendedVehicles.slice(0, 3);
+    const dbVehicleNames = topVehicles
+      .map((item: any) => {
+        const vehicle = item?.vehicleId || item?.vehicle || {};
+        const title =
+          item?.title?.trim() ||
+          `${vehicle?.make || ''} ${vehicle?.model || ''}`.trim();
+        return title || null;
+      })
+      .filter(Boolean) as string[];
+
+    const shortlist = topVehicles
+      .slice(0, 2)
+      .map((item: any) => {
+        const vehicle = item?.vehicleId || item?.vehicle || {};
+        const title =
+          item?.title ||
+          `${vehicle?.make || ''} ${vehicle?.model || ''}`.trim() ||
+          'Mau xe khac';
+        return `${title};${Number(item?.price || vehicle?.price || 0)};${vehicle?.type || 'N/A'}`;
+      })
+      .join('\n');
+
+    const prompt = `
+Ban la AI tu van xe.
+Tra loi tieng Viet, toi da 2 cau, ngan gon, tu nhien.
+TUYET DOI KHONG tu dat ten xe.
+KHONG nhac bat ky ten xe nao trong cau tra loi.
+Khong markdown, khong JSON.
+
+CTX: b=${session?.budget || 'na'}; t=${session?.carType || 'na'}; s=${session?.passengers || 'na'}; p=${session?.purpose || 'na'}
+DB:
+${shortlist || 'na'}
+USER: ${message}
+FALLBACK: ${fallbackReply}
+`;
+
+    try {
+      const text = await this.gemini.generate({
         prompt,
-        model: 'gemini-2.5-flash',
-        maxTokens: 200,
+        model: 'gemini-2.5-flash-lite',
+        maxTokens: 90,
       });
 
-      return this.parseAI(res);
-    } catch (err: any) {
-      const delay = this.extractRetryDelay(err) || 2000;
+      const advisory = (text || '').trim() || fallbackReply;
 
-      if (retry > 0) {
-        await new Promise((r) => setTimeout(r, delay));
-        return this.callAIWithRetry(message, session, retry - 1);
-      }
+      const dbSuggestion =
+        dbVehicleNames.length > 0
+          ? `Xe phù hợp có trong website: ${dbVehicleNames.join(', ')}.`
+          : 'Mình đã chọn một số xe phù hợp trong database ở bên dưới.';
 
-      // fallback nếu fail
-      return {
-        budget: null,
-        carType: null,
-        passengers: null,
-        purpose: null,
-        reply: 'Hiện tại hệ thống AI đang bận, bạn thử lại sau nhé 🙏',
-      };
-    }
-  }
+      const finalReply = `${advisory} ${dbSuggestion}`.trim();
 
-  // =========================
-  // BUILD PROMPT (GỘP INTENT + REPLY)
-  // =========================
-  private buildPrompt(message: string, session: any): string {
-    return `
-You are a car sales assistant.
+      this.cache.set(cacheKey, finalReply);
 
-User profile:
-- Budget: ${session.budget || 'unknown'}
-- Car type: ${session.carType || 'unknown'}
-- Passengers: ${session.passengers || 'unknown'}
-- Purpose: ${session.purpose || 'unknown'}
-
-Task:
-1. Extract missing fields
-2. Recommend a suitable car
-3. Keep answer short (2-3 sentences)
-
-Return ONLY JSON:
-{
-  "budget": number | null,
-  "carType": string | null,
-  "passengers": number | null,
-  "purpose": string | null,
-  "reply": string
-}
-
-User: "${message}"
-`;
-  }
-
-  // =========================
-  // PARSE AI RESPONSE
-  // =========================
-  private parseAI(text: string) {
-    try {
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      const clean = text.slice(start, end + 1);
-
-      return JSON.parse(clean);
+      return finalReply;
     } catch {
-      return {
-        budget: null,
-        carType: null,
-        passengers: null,
-        purpose: null,
-        reply: text,
-      };
+      return fallbackReply;
     }
-  }
-
-  // =========================
-  // EXTRACT RETRY DELAY
-  // =========================
-  private extractRetryDelay(err: any): number | null {
-    const msg = err?.message || '';
-    const match = msg.match(/retry in (\d+(\.\d+)?)s/i);
-
-    if (match) {
-      return Number(match[1]) * 1000;
-    }
-
-    return null;
   }
 
   private extractIntentLocal(message: string) {
-    // const text = message.toLowerCase();
     const text = this.normalizeText(message);
 
     let budget: number | null = null;
 
-    // const match = text.match(/(\d+)\s*(triệu|tỷ)/);
-    const match = text.match(/(\d+(?:\.\d+)?)\s*(tỷ|triệu)/);
+    const matches = text.match(/(\d+(?:\.\d+)?)\s*(tỷ|ty|triệu|trieu)/g);
 
-    if (match) {
-      const value = Number(match[1]);
-      const unit = match[2];
+    if (matches) {
+      let total = 0;
 
-      if (unit === 'tỷ') budget = value * 1_000_000_000;
-      if (unit === 'triệu') budget = value * 1_000_000;
+      for (const m of matches) {
+        const parts = m.match(/(\d+(?:\.\d+)?)\s*(tỷ|ty|triệu|trieu)/);
+        if (!parts) continue;
+
+        const value = Number(parts[1]);
+        const unit = parts[2];
+
+        if (unit === 'tỷ' || unit === 'ty') {
+          total += value * 1_000_000_000;
+        }
+
+        if (unit === 'triệu' || unit === 'trieu') {
+          total += value * 1_000_000;
+        }
+      }
+
+      budget = total;
     }
 
     let carType: string | null = null;
 
     if (text.includes('suv')) carType = 'SUV';
     if (text.includes('sedan')) carType = 'Sedan';
-    if (text.includes('7 chỗ')) carType = 'SUV';
-    if (text.includes('4 chỗ')) carType = 'Sedan';
-    if (text.includes('5 chỗ')) carType = 'Sedan';
+    if (text.includes('7 chỗ') || text.includes('7 cho')) carType = 'SUV';
+    if (text.includes('4 chỗ') || text.includes('4 cho')) carType = 'Sedan';
+    if (text.includes('5 chỗ') || text.includes('5 cho')) carType = 'Sedan';
 
     let purpose: string | undefined;
 
-    if (text.includes('gia đình')) purpose = 'family';
-    if (text.includes('đi làm') || text.includes('cá nhân'))
+    if (text.includes('gia đình') || text.includes('gia dinh')) purpose = 'family';
+    if (
+      text.includes('đi làm') ||
+      text.includes('di lam') ||
+      text.includes('cá nhân') ||
+      text.includes('ca nhan')
+    )
       purpose = 'personal';
-    if (text.includes('dịch vụ')) purpose = 'business';
+    if (text.includes('dịch vụ') || text.includes('dich vu')) purpose = 'business';
 
-    // =========================
-    // PASSENGERS
-    // =========================
     let passengers: number | undefined;
 
-    const peopleMatch = text.match(/(\d+)\s*(người|chỗ)/);
+    const peopleMatch = text.match(/(\d+)\s*(người|nguoi|chỗ|cho)/);
     if (peopleMatch) {
       passengers = Number(peopleMatch[1]);
     }
@@ -348,37 +347,7 @@ User: "${message}"
     };
   }
 
-  private buildRuleReply(session: any): string {
-    const budget = session.budget;
-
-    if (!budget) {
-      return 'Bạn muốn mua xe tầm giá bao nhiêu?';
-    }
-
-    if (budget <= 500_000_000) {
-      return 'Tầm 500 triệu bạn có thể tham khảo: \n - Kia Morning  \n - Hyundai i10   \n- Toyota Wigo \n Bạn có thể: \n- Gõ tên xe để mình phân tích chi tiết   \n - Hoặc nói dòng xe bạn thích (ví dụ: Mazda, Toyota...) để mình tìm giúp';
-    }
-
-    if (budget <= 800_000_000) {
-      return 'Bạn có thể cân nhắc Toyota Vios, Hyundai Accent hoặc Mazda 3 🚗';
-    }
-
-    if (budget <= 1_500_000_000) {
-      return 'Phù hợp với SUV như Mazda CX-5, Hyundai Tucson 👍';
-    }
-
-    return 'Bạn có thể xem các dòng cao cấp như Ford Everest hoặc Toyota Fortuner 🚙';
-  }
-
-  // private askNextQuestion(session: any): string | null {
-  //   const missing = session.missingFields;
-
-  //   if (!missing.length) return null;
-
-  //   const next = missing[0];
-
-  //   return this.questions[next] || null;
-  // }
+  // các function còn lại GIỮ NGUYÊN của bạn
   private askDynamicQuestion(session: any): string | null {
     const { purpose, passengers, carType } = session;
 
@@ -426,69 +395,50 @@ Bạn thích kiểu nào hơn ạ?`;
       }
     }
 
-    return null; // đủ info
+    return null;
+  }
+
+  private buildRuleReply(session: any): string {
+    const budget = session.budget;
+
+    if (!budget) {
+      return 'Bạn muốn mua xe tầm giá bao nhiêu?';
+    }
+
+    if (budget <= 500_000_000) {
+      return 'Tầm giá này mình sẽ ưu tiên xe gọn, tiết kiệm và dễ bảo dưỡng. Mình đã chọn một số xe đang có trên web phù hợp với nhu cầu của bạn ở bên dưới.';
+    }
+
+    if (budget <= 800_000_000) {
+      return 'Trong tầm giá này có nhiều lựa chọn sedan/crossover rất hợp đi hằng ngày. Hiện tại web đang có những xe dưới đây phù hợp với nhu cầu của bạn.';
+    }
+
+    if (budget <= 1_500_000_000) {
+      return 'Với ngân sách này bạn có thể nhắm nhóm SUV/crossover rộng rãi, an toàn và đi đường dài ổn. Hiện tại web đang có những xe dưới đây phù hợp với nhu cầu của bạn.';
+    }
+
+    return 'Với ngân sách này bạn có thể xem các lựa chọn SUV/cao cấp hơn, ưu tiên an toàn và tiện nghi. Hiện tại web đang có những xe dưới đây phù hợp với nhu cầu của bạn.';
   }
 
   private normalizeText(text: string): string {
-    return text.toLowerCase().replace(/[,\.]/g, '').replace(/\s+/g, ' ').trim();
+    return text
+      .toLowerCase()
+      .replace(/[,\.]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private isCarQuery(message: string): boolean {
     const text = this.normalizeText(message);
 
     const brands = [
-      'acura',
-      'alfa romeo',
-      'aston martin',
-      'audi',
-      'bentley',
-      'bmw',
-      'buick',
-      'byd',
-      'cadillac',
-      'chevrolet',
-      'chrysler',
-      'citroën',
-      'dodge',
-      'ferrari',
-      'fiat',
-      'ford',
-      'geely',
-      'genesis',
-      'gmc',
-      'great wall',
-      'honda',
-      'hyundai',
-      'infiniti',
-      'isuzu',
-      'jaguar',
-      'jeep',
-      'kia',
-      'lamborghini',
-      'land rover',
-      'lexus',
-      'lincoln',
-      'lucid',
-      'maserati',
-      'mazda',
-      'mclaren',
-      'mercedes-benz',
-      'mitsubishi',
-      'nio',
-      'nissan',
-      'peugeot',
-      'polestar',
-      'porsche',
-      'ram',
-      'renault',
-      'rivian',
-      'rolls-royce',
-      'subaru',
-      'suzuki',
-      'tesla',
-      'toyota',
-      'volkswagen',
-      'volvo',
+      'acura','alfa romeo','aston martin','audi','bentley','bmw','buick','byd',
+      'cadillac','chevrolet','chrysler','citroën','dodge','ferrari','fiat','ford',
+      'geely','genesis','gmc','great wall','honda','hyundai','infiniti','isuzu',
+      'jaguar','jeep','kia','lamborghini','land rover','lexus','lincoln','lucid',
+      'maserati','mazda','mclaren','mercedes-benz','mitsubishi','nio','nissan',
+      'peugeot','polestar','porsche','ram','renault','rivian','rolls-royce',
+      'subaru','suzuki','tesla','toyota','volkswagen','volvo',
     ];
 
     return brands.some((b) => text.includes(b));
@@ -499,17 +449,6 @@ Bạn thích kiểu nào hơn ạ?`;
   }
 
   private buildCarDetailReply(car: any): string {
-    //     return `
-    // ${car.name} có giá khoảng ${car.price?.toLocaleString()} VND
-
-    // - Loại: ${car.type}
-    // - Số chỗ: ${car.seats}
-
-    // 👉 Bạn muốn:
-    // - So sánh với xe khác
-    // - Xem xe tương tự
-    // - Hay hỏi thêm thông tin?
-    // `;
     return `
 ${car.title} có giá khoảng ${car.price.toLocaleString()} ${car.currency}
 
