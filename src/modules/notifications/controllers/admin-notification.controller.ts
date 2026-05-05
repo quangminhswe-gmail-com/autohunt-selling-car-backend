@@ -14,6 +14,7 @@ import { NotificationService } from '../notification.service';
 import { CreateNotificationDto } from '../dto/create-notification.dto';
 import { RolesGuard } from '@/modules/auth/guards/jwt-roles.guard';
 import { Roles } from '@/modules/auth/decorators/roles.decorator';
+import { CreateNotificationByEmailDto } from '../dto/create-notification-by-email.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
@@ -34,5 +35,14 @@ export class AdminNotificationController {
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.notificationService.deleteNotification(id);
+  }
+
+  @Post('send-by-email')
+  createByEmail(@Body() dto: CreateNotificationByEmailDto, @Req() req) {
+    return this.notificationService.createNotificationByEmail(
+      dto.email,
+      dto,
+      req.user.id,
+    );
   }
 }

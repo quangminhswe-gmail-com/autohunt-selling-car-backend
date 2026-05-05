@@ -6,6 +6,8 @@ import {
   NotificationSchema,
 } from './schemas/notification.schema';
 
+import { User, UserSchema } from '@/modules/users/user.schema';
+
 import { NotificationService } from './notification.service';
 import { NotificationController } from './controllers/notification.controller';
 import { AdminNotificationController } from './controllers/admin-notification.controller';
@@ -17,6 +19,7 @@ import { AdminNotificationController } from './controllers/admin-notification.co
         name: Notification.name,
         schema: NotificationSchema,
       },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [NotificationController, AdminNotificationController],
