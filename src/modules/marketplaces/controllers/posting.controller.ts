@@ -16,11 +16,11 @@ import { PostingService } from '@/modules/marketplaces/services/posting.service'
 import { CreatePostingDto } from '@/modules/marketplaces/dto/create-posting.dto';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { UpdatePostingDto } from '../dto/update-posting.dto';
-@UseGuards(JwtAuthGuard)
 @Controller('postings')
 export class PostingController {
   constructor(private readonly postingService: PostingService) {}
   @Post()
+  @UseGuards(JwtAuthGuard)
   async create(@Body() createPostingDto: CreatePostingDto, @Req() req) {
     console.log(createPostingDto);
     if (!req.user?.id) {
@@ -35,6 +35,7 @@ export class PostingController {
   }
 
   @Get('my-postings')
+  @UseGuards(JwtAuthGuard)
   findMyPostings(@Req() req) {
     return this.postingService.findMyPostings(req.user.id);
   }
@@ -46,11 +47,13 @@ export class PostingController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   async removePosting(@Param('id') postingId: string, @Request() req) {
     return this.postingService.removePosting(postingId, req.user.id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   async updatePosting(
     @Param('id') postingId: string,
     @Body() dto: UpdatePostingDto,
