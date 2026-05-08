@@ -15,6 +15,7 @@ import {
 import { PostingService } from '@/modules/marketplaces/services/posting.service';
 import { CreatePostingDto } from '@/modules/marketplaces/dto/create-posting.dto';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { Public } from '@/modules/auth/decorators/public.decoration';
 import { UpdatePostingDto } from '../dto/update-posting.dto';
 @Controller('postings')
 export class PostingController {
@@ -30,6 +31,7 @@ export class PostingController {
   }
 
   @Get()
+  @Public()
   findAll() {
     return this.postingService.findAll();
   }
@@ -41,6 +43,7 @@ export class PostingController {
   }
 
   @Get('details/:id')
+  @Public()
   async findOne(@Param('id') id: string) {
     await this.postingService.increaseViewCount(id);
     return this.postingService.findOne(id);
