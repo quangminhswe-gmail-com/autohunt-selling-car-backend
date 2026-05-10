@@ -18,7 +18,7 @@ export class Posting {
     ref: User.name,
     required: true,
   })
-  sellerId: Types.ObjectId;
+  ownerId: Types.ObjectId;
 
   @Prop({
     required: true,
@@ -35,7 +35,7 @@ export class Posting {
   slug: string;
 
   @Prop({
-    required: true,
+    required: false,
   })
   description: string;
 

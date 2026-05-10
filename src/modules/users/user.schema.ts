@@ -7,7 +7,7 @@ export class User extends Document {
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop()
   password: string;
 
   @Prop({ required: true, trim: true })
@@ -16,8 +16,11 @@ export class User extends Document {
   @Prop({ required: true, trim: true })
   lastName: string;
 
-  @Prop({ default: false, trim: true })
+  @Prop({ default: '', trim: true })
   phoneNumber: string;
+
+  @Prop({ default: '' })
+  deliveryAddress: string;
 
   @Prop({ type: String, enum: UserRole, default: UserRole.CUSTOMER })
   role: UserRole;
@@ -39,6 +42,16 @@ export class User extends Document {
 
   @Prop({ default: 0 })
   totalPostings: number;
+
+  @Prop({ default: false })
+  isDelete: boolean;
+
+  @Prop({ default: 'local' })
+  provider: string;
+
+  @Prop()
+  providerId: string;
 }
 
+export type UserDocument = User & Document;
 export const UserSchema = SchemaFactory.createForClass(User);
