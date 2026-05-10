@@ -11,6 +11,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
 import { ChatModule } from './modules/chat/chat.module';
 import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
 import { VoiceVehicleFilterModule } from './modules/voice-vehicle-filter/voice-vehicle-filter.module';
+import { PredictModule } from './modules/image-predict/predict.module';
 @Module({
   imports: [
     /* ================= LOGGER ================= */
@@ -75,6 +76,7 @@ import { VoiceVehicleFilterModule } from './modules/voice-vehicle-filter/voice-v
     ChatModule,
     AiAssistantModule,
     VoiceVehicleFilterModule,
+    PredictModule,
   ],
 })
 export class AppModule {}

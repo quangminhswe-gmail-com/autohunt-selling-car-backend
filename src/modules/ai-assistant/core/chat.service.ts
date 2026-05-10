@@ -322,7 +322,8 @@ FALLBACK: ${fallbackReply}
 
     let purpose: string | undefined;
 
-    if (text.includes('gia đình') || text.includes('gia dinh')) purpose = 'family';
+    if (text.includes('gia đình') || text.includes('gia dinh'))
+      purpose = 'family';
     if (
       text.includes('đi làm') ||
       text.includes('di lam') ||
@@ -330,7 +331,8 @@ FALLBACK: ${fallbackReply}
       text.includes('ca nhan')
     )
       purpose = 'personal';
-    if (text.includes('dịch vụ') || text.includes('dich vu')) purpose = 'business';
+    if (text.includes('dịch vụ') || text.includes('dich vu'))
+      purpose = 'business';
 
     let passengers: number | undefined;
 
@@ -421,24 +423,65 @@ Bạn thích kiểu nào hơn ạ?`;
   }
 
   private normalizeText(text: string): string {
-    return text
-      .toLowerCase()
-      .replace(/[,\.]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return text.toLowerCase().replace(/[,\.]/g, '').replace(/\s+/g, ' ').trim();
   }
 
   private isCarQuery(message: string): boolean {
     const text = this.normalizeText(message);
 
     const brands = [
-      'acura','alfa romeo','aston martin','audi','bentley','bmw','buick','byd',
-      'cadillac','chevrolet','chrysler','citroën','dodge','ferrari','fiat','ford',
-      'geely','genesis','gmc','great wall','honda','hyundai','infiniti','isuzu',
-      'jaguar','jeep','kia','lamborghini','land rover','lexus','lincoln','lucid',
-      'maserati','mazda','mclaren','mercedes-benz','mitsubishi','nio','nissan',
-      'peugeot','polestar','porsche','ram','renault','rivian','rolls-royce',
-      'subaru','suzuki','tesla','toyota','volkswagen','volvo',
+      'acura',
+      'alfa romeo',
+      'aston martin',
+      'audi',
+      'bentley',
+      'bmw',
+      'buick',
+      'byd',
+      'cadillac',
+      'chevrolet',
+      'chrysler',
+      'citroën',
+      'dodge',
+      'ferrari',
+      'fiat',
+      'ford',
+      'geely',
+      'genesis',
+      'gmc',
+      'great wall',
+      'honda',
+      'hyundai',
+      'infiniti',
+      'isuzu',
+      'jaguar',
+      'jeep',
+      'kia',
+      'lamborghini',
+      'land rover',
+      'lexus',
+      'lincoln',
+      'lucid',
+      'maserati',
+      'mazda',
+      'mclaren',
+      'mercedes-benz',
+      'mitsubishi',
+      'nio',
+      'nissan',
+      'peugeot',
+      'polestar',
+      'porsche',
+      'ram',
+      'renault',
+      'rivian',
+      'rolls-royce',
+      'subaru',
+      'suzuki',
+      'tesla',
+      'toyota',
+      'volkswagen',
+      'volvo',
     ];
 
     return brands.some((b) => text.includes(b));
