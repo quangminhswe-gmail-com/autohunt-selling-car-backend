@@ -67,6 +67,7 @@ export enum VehicleMake {
   TOYOTA = 'Toyota',
   VOLKSWAGEN = 'Volkswagen',
   VOLVO = 'Volvo',
+  VINFAST = 'VinFast',
 }
 
 export enum TransmissionType {
