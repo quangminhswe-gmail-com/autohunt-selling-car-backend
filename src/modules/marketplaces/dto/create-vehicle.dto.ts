@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import {
+  VehicleMake,
   TransmissionType,
   VehicleType,
   FuelType,
@@ -14,8 +15,8 @@ import {
 } from '@/common/constants/enum';
 
 export class CreateVehicleDto {
-  @IsString()
-  make: string;
+  @IsEnum(VehicleMake)
+  make: VehicleMake;
 
   @IsString()
   model: string;
